@@ -163,6 +163,12 @@ input, select, textarea {
   color: var(--text-primary);
 }
 
+input[type="color"].admin-form-input {
+  min-height: 48px;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
@@ -1617,6 +1623,70 @@ input, select, textarea {
     right: 24px;
     left: auto;
     transform: none;
+  }
+}
+
+@media (max-width: 767px) {
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+
+  .app-container {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
+  }
+
+  .site-header {
+    min-width: 0;
+  }
+
+  .header-inner {
+    gap: 0.6rem;
+  }
+
+  .brand-link {
+    max-width: calc(100% - 110px);
+    min-width: 0;
+  }
+
+  .brand-logo-img {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  .brand-text-lockup {
+    min-width: 0;
+  }
+
+  .brand-title {
+    font-size: 0.92rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .year-badge {
+    display: none;
+  }
+
+  .hero-title {
+    font-size: clamp(1.6rem, 7vw, 2.15rem);
+  }
+
+  .hero-search-wrapper {
+    max-width: 100%;
   }
 }
 

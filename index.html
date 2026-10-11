@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     
     <!-- Primary SEO & Platform Identity -->
     <title>منصة الامتحان المشترك – قسم هندسة وتكنولوجيا البصريات | Optics Common Exam Platform</title>
@@ -360,43 +360,7 @@
             مميزات المنصة الأكاديمية
           </h3>
 
-          <div class="about-features-grid">
-            <div class="feature-box">
-              <div class="feature-box-icon"><i data-lucide="eye" style="width: 20px; height: 20px;"></i></div>
-              <h4>قارئ PDF داخلي مدمج</h4>
-              <p>تصفح وقراءة المحاضرات مباشرة داخل المنصة دون الحاجة لمغادرة الموقع أو تحميل تطبيقات إضافية.</p>
-            </div>
-
-            <div class="feature-box">
-              <div class="feature-box-icon"><i data-lucide="search" style="width: 20px; height: 20px;"></i></div>
-              <h4>محرك بحث ذكي وسريع</h4>
-              <p>بحث فوري بالعربية مع معالجة حركات التشكيل واختصارات لوحة المفاتيح (Cmd+K) للوصول المباشر لأي ملف.</p>
-            </div>
-
-            <div class="feature-box">
-              <div class="feature-box-icon"><i data-lucide="shield-check" style="width: 20px; height: 20px;"></i></div>
-              <h4>تحكم إداري كامل وشامل</h4>
-              <p>صلاحيات متكاملة للمشرف لتعديل نصوص الصفحة الرئيسية، البطاقات، والمواد ورفع الملفات من الجهاز.</p>
-            </div>
-
-            <div class="feature-box">
-              <div class="feature-box-icon"><i data-lucide="users" style="width: 20px; height: 20px;"></i></div>
-              <h4>نظام حسابات الطلاب</h4>
-              <p>تسجيل حسابات شخصية للطلبة مع إمكانية تحكم المشرف في اليوزر نيم ورموز المرور وإدارتها بكل سهولة.</p>
-            </div>
-
-            <div class="feature-box">
-              <div class="feature-box-icon"><i data-lucide="smartphone" style="width: 20px; height: 20px;"></i></div>
-              <h4>تصميم مخصص للهواتف والتمرير السلس</h4>
-              <p>شريط سفلي iOS وتمرير سلس فائق النعومة بين أقسام الصفحة مع توافق تام مع شاشات iPhone الحديثة.</p>
-            </div>
-
-            <div class="feature-box">
-              <div class="feature-box-icon"><i data-lucide="download-cloud" style="width: 20px; height: 20px;"></i></div>
-              <h4>تصدير JSON متوافق مع GitHub Pages</h4>
-              <p>إمكانية تصدير التعديلات كملف exams.json بضغطة زر واحدة لرفعها وتحديث مستودع GitHub فوراً.</p>
-            </div>
-          </div>
+          <div id="about-features-grid" class="about-features-grid"></div>
         </div>
       </section>
 
@@ -599,6 +563,16 @@
               <div class="admin-form-group">
                 <label class="admin-form-label" for="admin-about-body">النبذة والمحتوى التعريفي الكامل</label>
                 <textarea id="admin-about-body" class="admin-form-textarea" rows="6" required></textarea>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-form-label" for="admin-show-platform-features" style="display: flex; align-items: center; gap: 0.5rem;">
+                  <input id="admin-show-platform-features" type="checkbox" />
+                  <span>إظهار قسم مميزات المنصة للمستخدمين</span>
+                </label>
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-form-label" for="admin-platform-features">مميزات المنصة (كل ميزة في سطر جديد، الصيغة: العنوان | الوصف | icon)</label>
+                <textarea id="admin-platform-features" class="admin-form-textarea" rows="8" placeholder="قارئ PDF داخلي مدمج | تصفح وقراءة المحاضرات مباشرة داخل المنصة | eye"></textarea>
               </div>
 
               <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">

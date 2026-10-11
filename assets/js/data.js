@@ -48,11 +48,11 @@ const DataLayer = (() => {
   /**
    * جلب وتحميل بيانات الامتحانات (مع منع الكاش ودعم المزامنة السحابية)
    */
-  async function loadData() {
-    if (isLoaded && examData) {
+  async function loadData(forceRefresh = false) {
+    if (isLoaded && examData && !forceRefresh) {
       return examData;
     }
-    if (loadPromise) {
+    if (loadPromise && !forceRefresh) {
       return loadPromise;
     }
 
@@ -185,6 +185,17 @@ const DataLayer = (() => {
     if (!data.aboutSubtitle) data.aboutSubtitle = 'Optics Common Exam Platform · للعام الدراسي 2026 - 2027';
     if (!data.aboutBody) {
       data.aboutBody = 'تم تطوير هذه المنصة لتكون المرجع الرسمي والأول لطلبة قسم هندسة وتكنولوجيا البصريات للوصول الفوري والمنظم إلى جميع ملفات الامتحان التقويمي الوزاري المشترك. تم تصميم الواجهة بمعايير تطبيقات Apple الراقية بالثيم البنفسجي، لتعمل بكفاءة مطلقة على أجهزة iPhone، iPad، Mac، وشاشات الكمبيوتر.';
+    }
+    if (data.showPlatformFeatures === undefined) data.showPlatformFeatures = true;
+    if (!Array.isArray(data.platformFeatures) || data.platformFeatures.length === 0) {
+      data.platformFeatures = [
+        { title: 'قارئ PDF داخلي مدمج', description: 'تصفح وقراءة المحاضرات مباشرة داخل المنصة دون الحاجة لمغادرة الموقع أو تحميل تطبيقات إضافية.', icon: 'eye', enabled: true },
+        { title: 'محرك بحث ذكي وسريع', description: 'بحث فوري بالعربية مع معالجة حركات التشكيل واختصارات لوحة المفاتيح (Cmd+K) للوصول المباشر لأي ملف.', icon: 'search', enabled: true },
+        { title: 'تحكم إداري كامل وشامل', description: 'صلاحيات متكاملة للمشرف لتعديل نصوص الصفحة الرئيسية، البطاقات، والمواد ورفع الملفات من الجهاز.', icon: 'shield-check', enabled: true },
+        { title: 'نظام حسابات الطلاب', description: 'تسجيل حسابات شخصية للطلبة مع إمكانية تحكم المشرف في اليوزر نيم ورموز المرور وإدارتها بكل سهولة.', icon: 'users', enabled: true },
+        { title: 'تصميم مخصص للهواتف والتمرير السلس', description: 'شريط سفلي iOS وتمرير سلس فائق النعومة بين أقسام الصفحة مع توافق تام مع شاشات iPhone الحديثة.', icon: 'smartphone', enabled: true },
+        { title: 'تصدير JSON متوافق مع GitHub Pages', description: 'إمكانية تصدير التعديلات كملف exams.json بضغطة زر واحدة لرفعها وتحديث مستودع GitHub فوراً.', icon: 'download-cloud', enabled: true }
+      ];
     }
   }
 
@@ -550,6 +561,17 @@ const DataLayer = (() => {
     if (settings.aboutTitle !== undefined) examData.aboutTitle = settings.aboutTitle.trim();
     if (settings.aboutSubtitle !== undefined) examData.aboutSubtitle = settings.aboutSubtitle.trim();
     if (settings.aboutBody !== undefined) examData.aboutBody = settings.aboutBody.trim();
+    if (settings.showPlatformFeatures !== undefined) examData.showPlatformFeatures = !!settings.showPlatformFeatures;
+    if (settings.platformFeatures !== undefined) {
+      if (Array.isArray(settings.platformFeatures)) {
+        examData.platformFeatures = settings.platformFeatures.map(item => ({
+          title: (item.title || 'ميزة جديدة').trim(),
+          description: (item.description || '').trim(),
+          icon: item.icon || 'sparkles',
+          enabled: item.enabled !== false
+        }));
+      }
+    }
 
     return await saveChanges();
   }

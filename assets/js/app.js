@@ -57,6 +57,7 @@ const App = (() => {
     }
 
     refreshIcons();
+    setupAutoRefresh();
   }
 
   /**
@@ -560,8 +561,41 @@ const App = (() => {
   /**
    * تحديث اسم المنصة والقسم وبطاقة الهيرو التوضيحية
    */
+  function setupAutoRefresh() {
+    setInterval(async () => {
+      if (document.hidden) return;
+      try {
+        const freshData = await window.DataLayer.loadData(true);
+        if (!freshData || !state.data) return;
+
+        const changed = JSON.stringify(state.data) !== JSON.stringify(freshData);
+        if (changed) {
+          state.data = freshData;
+          updateGlobalBranding(freshData);
+          renderPlatformFeatures();
+
+          if (state.currentView === 'home') {
+            renderHomeView();
+          } else if (state.currentView === 'stage' && state.currentStageId) {
+            renderStageView(state.currentStageId);
+          } else if (state.currentView === 'about') {
+            renderAboutView();
+          }
+
+          if (state.isAdmin) {
+            updateAdminUI();
+          }
+        }
+      } catch (err) {
+        console.warn('Auto refresh skipped:', err);
+      }
+    }, 15000);
+  }
+
   function updateGlobalBranding(data) {
     if (!data) return;
+
+    renderPlatformFeatures();
 
     // الهيدر
     const brandPlatformName = document.getElementById('brand-platform-name');
@@ -629,6 +663,29 @@ const App = (() => {
   /**
    * عرض الصفحة الرئيسية
    */
+  function renderPlatformFeatures() {
+    const grid = document.getElementById('about-features-grid');
+    if (!grid || !state.data) return;
+
+    const features = Array.isArray(state.data.platformFeatures) ? state.data.platformFeatures.filter(item => item.enabled !== false) : [];
+    const visible = !!state.data.showPlatformFeatures && features.length > 0;
+
+    if (!visible) {
+      grid.innerHTML = '';
+      return;
+    }
+
+    grid.innerHTML = features.map(feature => `
+      <div class="feature-box">
+        <div class="feature-box-icon"><i data-lucide="${feature.icon || 'sparkles'}" style="width: 20px; height: 20px;"></i></div>
+        <h4>${feature.title || 'ميزة جديدة'}</h4>
+        <p>${feature.description || ''}</p>
+      </div>
+    `).join('');
+
+    refreshIcons();
+  }
+
   function renderHomeView() {
     state.currentView = 'home';
     showViewContainer('home-view');
@@ -1113,6 +1170,14 @@ const App = (() => {
     if (cUrl && cloudCfg.syncUrl) cUrl.value = cloudCfg.syncUrl;
     if (cKey && cloudCfg.apiKey) cKey.value = cloudCfg.apiKey;
 
+    const showFeaturesToggle = document.getElementById('admin-show-platform-features');
+    const featuresText = document.getElementById('admin-platform-features');
+    if (showFeaturesToggle) showFeaturesToggle.checked = !!(data.showPlatformFeatures !== false);
+    if (featuresText) {
+      const features = Array.isArray(data.platformFeatures) ? data.platformFeatures : [];
+      featuresText.value = features.map(item => `${item.title || 'ميزة جديدة'} | ${item.description || ''} | ${item.icon || 'sparkles'}`).join('\n');
+    }
+
     updateDeploymentStatusBanner();
   }
 
@@ -1220,11 +1285,28 @@ const App = (() => {
     const aboutTitle = document.getElementById('admin-about-title').value;
     const aboutSubtitle = document.getElementById('admin-about-subtitle').value;
     const aboutBody = document.getElementById('admin-about-body').value;
+    const showPlatformFeatures = document.getElementById('admin-show-platform-features').checked;
+    const featuresText = document.getElementById('admin-platform-features').value.trim();
+
+    let platformFeatures = undefined;
+    if (featuresText) {
+      platformFeatures = featuresText.split(/\n+/).filter(Boolean).map(line => {
+        const parts = line.split('|').map(item => item.trim());
+        return {
+          title: parts[0] || 'ميزة جديدة',
+          description: parts[1] || 'وصف الميزة',
+          icon: parts[2] || 'sparkles',
+          enabled: true
+        };
+      });
+    }
 
     const res = await window.DataLayer.updateAllUIElements({
       aboutTitle,
       aboutSubtitle,
-      aboutBody
+      aboutBody,
+      showPlatformFeatures,
+      platformFeatures
     });
 
     state.data = window.DataLayer.getData();
@@ -1927,11 +2009,11 @@ git push -u origin main
       title: `إضافة مادة جديدة إلى ${stage.name}`,
       fields: [
         { id: 'm_sub_name', label: 'اسم المادة بالعربية', placeholder: 'مثال: البصريات الفيزيائية' },
-        { id: 'm_sub_name_en', label: 'اسم المادة بالإنجليزية (اختياري)', placeholder: 'Physical Optics' },
+        { id: 'm_sub_name_en', label: 'اسم المادة بالإنجليزية (اختياري)', placeholder: 'Physical Optics', required: false },
         { id: 'm_sub_code', label: 'رمز المادة الأكاديمي', placeholder: 'OPT-201' },
         { id: 'm_sub_instructor', label: 'أستاذ المادة المشترك', placeholder: 'أستاذ المادة المشترك' },
-        { id: 'm_sub_desc', label: 'وصف مفردات المادة', type: 'textarea', placeholder: 'ملخص مواضيع الامتحان المشترك...' },
-        { id: 'm_sub_color', label: 'لون المادة (HEX)', value: '#7c3aed' }
+        { id: 'm_sub_desc', label: 'وصف مفردات المادة (اختياري)', type: 'textarea', placeholder: 'ملخص مواضيع الامتحان المشترك...', required: false },
+        { id: 'm_sub_color', label: 'اللون المميز (اختياري)', type: 'color', value: '#7c3aed', required: false }
       ],
       onSubmit: (vals) => {
         window.DataLayer.addSubject(stageId, {
@@ -1957,11 +2039,11 @@ git push -u origin main
       title: `تعديل مادة ${subject.name}`,
       fields: [
         { id: 'm_sub_name', label: 'اسم المادة بالعربية', value: subject.name },
-        { id: 'm_sub_name_en', label: 'اسم المادة بالإنجليزية', value: subject.nameEn || '' },
+        { id: 'm_sub_name_en', label: 'اسم المادة بالإنجليزية (اختياري)', value: subject.nameEn || '', required: false },
         { id: 'm_sub_code', label: 'رمز المادة', value: subject.code || '' },
         { id: 'm_sub_instructor', label: 'أستاذ المادة', value: subject.instructor || '' },
-        { id: 'm_sub_desc', label: 'الوصف', type: 'textarea', value: subject.description || '' },
-        { id: 'm_sub_color', label: 'اللون المميز (HEX)', value: subject.color || '#7c3aed' }
+        { id: 'm_sub_desc', label: 'الوصف (اختياري)', type: 'textarea', value: subject.description || '', required: false },
+        { id: 'm_sub_color', label: 'اللون المميز (اختياري)', type: 'color', value: subject.color || '#7c3aed', required: false }
       ],
       onSubmit: (vals) => {
         window.DataLayer.updateSubject(stageId, subjectId, {
@@ -2009,7 +2091,7 @@ git push -u origin main
       g.innerHTML = `
         <label class="admin-form-label" for="${f.id}">${f.label}</label>
         ${f.type === 'textarea' ? `
-          <textarea id="${f.id}" class="admin-form-textarea" rows="3" placeholder="${f.placeholder || ''}">${f.value || ''}</textarea>
+          <textarea id="${f.id}" class="admin-form-textarea" rows="3" placeholder="${f.placeholder || ''}" ${f.required === false ? '' : 'required'}>${f.value || ''}</textarea>
         ` : `
           <input id="${f.id}" type="${f.type || 'text'}" class="admin-form-input" value="${f.value !== undefined ? f.value : ''}" placeholder="${f.placeholder || ''}" ${f.required !== false ? 'required' : ''} />
         `}
