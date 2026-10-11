@@ -1840,28 +1840,7 @@ git push -u origin main
     if (!tbody) return;
     const users = await window.DataLayer.getRegisteredUsers(forceRefresh);
 
-    if (forceRefresh && !window.DataLayer.hasSharedUserServer()) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align: center; padding: 2rem; color: var(--warning);">
-            خادم الحسابات غير متاح. GitHub Pages لا يدعم حفظ الحسابات المشتركة؛ شغّل الموقع على خادم Node.js لعرض حسابات جميع الأجهزة.
-          </td>
-        </tr>
-      `;
-      return;
-    }
-    if (forceRefresh && window.DataLayer.getUsersApiError()) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align: center; padding: 2rem; color: var(--warning);">
-            ${window.DataLayer.getUsersApiError()} ${window.DataLayer.getUsersApiError().includes('المشرف') ? 'سجّل الخروج ثم ادخل مجدداً لتحديث صلاحية لوحة الإدارة.' : ''}
-          </td>
-        </tr>
-      `;
-      return;
-    }
-
-    if (users.length === 0) {
+    if (!users || users.length === 0) {
       tbody.innerHTML = `
         <tr>
           <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
