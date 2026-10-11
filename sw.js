@@ -1,4 +1,4 @@
-const CACHE_NAME = 'optics-platform-v4';
+const CACHE_NAME = 'optics-platform-v5';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './assets/images/logo.svg'];
 
 self.addEventListener('install', event => {
@@ -20,7 +20,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.includes('/api/')) return;
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.includes('/api/') || url.pathname.endsWith('.json')) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(

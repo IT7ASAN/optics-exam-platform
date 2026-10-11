@@ -27,6 +27,12 @@ const DataLayer = (() => {
     return `${base}${path}`;
   }
 
+  function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
+  }
+
   // بيانات حساب المشرف الافتراضية
   const ADMIN_CREDENTIALS = {
     username: 'it7asan',
@@ -108,10 +114,10 @@ const DataLayer = (() => {
         // 3. جلب ملف البيانات من المستودع (GitHub Pages / Static Hosting) مع كسر الكاش لضمان وصول التعديلات للجميع
         if (!fetchedData) {
           try {
-            const fileRes = await fetch(`./data/exams.json${cacheBuster}`, {
+            const fileRes = await fetchWithTimeout(`./data/exams.json${cacheBuster}`, {
               cache: 'no-store',
               headers: { 'Accept': 'application/json' }
-            });
+            }, 10000);
             if (fileRes.ok) {
               fetchedData = await fileRes.json();
             }
