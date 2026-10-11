@@ -59,11 +59,7 @@ const DataLayer = (() => {
           try {
             const apiRes = await fetch(apiUrl(`/api/exams${cacheBuster}`), {
               cache: 'no-store',
-              headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache'
-              }
+              headers: { 'Accept': 'application/json' }
             });
             if (apiRes.ok) {
               fetchedData = await apiRes.json();
@@ -105,11 +101,7 @@ const DataLayer = (() => {
           try {
             const fileRes = await fetch(`./data/exams.json${cacheBuster}`, {
               cache: 'no-store',
-              headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache'
-              }
+              headers: { 'Accept': 'application/json' }
             });
             if (fileRes.ok) {
               fetchedData = await fileRes.json();

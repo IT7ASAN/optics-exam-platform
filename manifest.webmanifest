@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "منصة الامتحان المشترك",
+  "short_name": "امتحان البصريات",
+  "description": "منصة قسم تقنيات البصريات للامتحان المشترك",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#fbfaff",
+  "theme_color": "#7c3aed",
+  "icons": [
+    { "src": "./assets/images/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
