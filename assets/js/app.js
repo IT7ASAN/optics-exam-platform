@@ -28,7 +28,7 @@ const App = (() => {
     setupEventListeners();
     setupSmoothScrolling();
     setupRouting();
-    setupInstallPrompt();
+    if (await setupInstallPrompt()) return;
 
     // تهيئة عارض PDF
     PDFViewer.init({
@@ -572,9 +572,9 @@ const App = (() => {
     if (aboutInstallCard) aboutInstallCard.hidden = shouldHide;
   }
 
-  function setupInstallPrompt() {
+  async function setupInstallPrompt() {
     const installButtons = document.querySelectorAll('#install-app-button, #about-install-app-button');
-    if (!installButtons.length) return;
+    if (!installButtons.length) return false;
 
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -604,8 +604,21 @@ const App = (() => {
 
     updateInstallButton();
     if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-      navigator.serviceWorker.register('./sw.js').catch(error => console.warn('تعذر تسجيل Service Worker:', error));
+      if (window.location.hostname.endsWith('.github.io')) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        const cleanupRequested = sessionStorage.getItem('optics_sw_cleanup_requested') === 'true';
+        if (registrations.length && !cleanupRequested) {
+          sessionStorage.setItem('optics_sw_cleanup_requested', 'true');
+          await Promise.all(registrations.map(registration => registration.unregister()));
+          window.location.reload();
+          return true;
+        }
+        if (!registrations.length) sessionStorage.removeItem('optics_sw_cleanup_requested');
+      } else {
+        navigator.serviceWorker.register('./sw.js').catch(error => console.warn('تعذر تسجيل Service Worker:', error));
+      }
     }
+    return false;
   }
 
   function openLoginModal() {
