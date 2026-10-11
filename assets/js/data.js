@@ -36,6 +36,7 @@ const DataLayer = (() => {
   let isServerAvailable = false;
   let usersServerAvailable = false;
   let usersApiError = '';
+  let apiRetryAfter = 0;
 
   /**
    * جلب وتحميل بيانات الامتحانات (مع منع الكاش ودعم المزامنة السحابية)
@@ -54,20 +55,29 @@ const DataLayer = (() => {
         const cacheBuster = `?t=${Date.now()}`;
 
         // 1. محاولة جلب أحدث البيانات الحية من الخادم المشترك (Server API) إذا كان متاحاً
-        try {
-          const apiRes = await fetch(apiUrl(`/api/exams${cacheBuster}`), {
-            cache: 'no-store',
-            headers: {
-              'Accept': 'application/json',
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache'
+        if (Date.now() >= apiRetryAfter) {
+          try {
+            const apiRes = await fetch(apiUrl(`/api/exams${cacheBuster}`), {
+              cache: 'no-store',
+              headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+              }
+            });
+            if (apiRes.ok) {
+              fetchedData = await apiRes.json();
+              isServerAvailable = true;
+              apiRetryAfter = 0;
+            } else {
+              isServerAvailable = false;
+              if (apiRes.status === 404 || apiRes.status === 405) apiRetryAfter = Date.now() + 60000;
             }
-          });
-          if (apiRes.ok) {
-            fetchedData = await apiRes.json();
-            isServerAvailable = true;
+          } catch (apiErr) {
+            isServerAvailable = false;
+            apiRetryAfter = Date.now() + 60000;
           }
-        } catch (apiErr) {
+        } else {
           isServerAvailable = false;
         }
 
@@ -288,15 +298,19 @@ const DataLayer = (() => {
    * فحص حالة الخادم المباشر لمعرفة إن كان الموقع يعمل بـ Fullstack أم GitHub Pages Static
    */
   async function checkServerStatus() {
+    if (Date.now() < apiRetryAfter) return { isOnline: false, hasServer: false };
     try {
       const res = await fetch(apiUrl(`/api/status?_t=${Date.now()}`), { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         isServerAvailable = !!data.hasServer;
+        apiRetryAfter = 0;
         return { isOnline: true, hasServer: true };
       }
+      if (res.status === 404 || res.status === 405) apiRetryAfter = Date.now() + 60000;
     } catch (e) {
       isServerAvailable = false;
+      apiRetryAfter = Date.now() + 60000;
     }
     return { isOnline: false, hasServer: false };
   }
@@ -356,78 +370,26 @@ const DataLayer = (() => {
       throw new Error('اسم المستودع يجب أن يكون بصيغة: اسم-المستخدم/اسم-المستودع (مثال: ahmed/optics-platform)');
     }
 
-    const filePath = 'data/exams.json';
-    const apiUrl = `https://api.github.com/repos/${cleanRepo}/contents/${filePath}?ref=${encodeURIComponent(cleanBranch)}`;
-
-    // 1. جلب الـ SHA الحالي للملف لتحديثه
-    let currentSha = null;
-    try {
-      const getRes = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `token ${cleanToken}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      });
-
-      if (getRes.ok) {
-        const fileInfo = await getRes.json();
-        currentSha = fileInfo.sha;
-      } else if (getRes.status === 401 || getRes.status === 403) {
-        throw new Error('رمز الوصول (GitHub Token) غير صالح أو منتهي الصلاحية، أو لا يملك صلاحية repo/contents.');
-      } else if (getRes.status === 404) {
-        currentSha = null; // سيتم إنشاء الملف لأول مرة
-      }
-    } catch (err) {
-      if (err.message && err.message.includes('Token')) throw err;
-    }
-
-    // 2. تحديث الطوابع الزمنية في examData
+    // تحديث الطوابع الزمنية قبل إرسال البيانات إلى الخادم الوسيط.
     examData.lastUpdated = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
     examData.lastUpdatedTimestamp = Date.now();
 
-    // تشفير النصوص العربية بدقة إلى UTF-8 Base64
-    const jsonString = JSON.stringify(examData, null, 2);
-    const utf8Bytes = new TextEncoder().encode(jsonString);
-    let binary = '';
-    for (let i = 0; i < utf8Bytes.length; i++) {
-      binary += String.fromCharCode(utf8Bytes[i]);
-    }
-    const base64Content = window.btoa(binary);
-
-    // 3. إرسال الـ Commit إلى GitHub REST API
-    const putUrl = `https://api.github.com/repos/${cleanRepo}/contents/${filePath}`;
-    const payload = {
-      message: commitMessage || `تحديث بيانات منصة الامتحان المشترك بواسطة لوحة الإدارة (${new Date().toLocaleDateString('ar-EG')}) 🚀`,
-      content: base64Content,
-      branch: cleanBranch
-    };
-    if (currentSha) {
-      payload.sha = currentSha;
-    }
-
-    const putRes = await fetch(putUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${cleanToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github.v3+json'
-      },
-      body: JSON.stringify(payload)
+    const publishResponse = await fetch(apiUrl('/api/github/publish-exams'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
+      body: JSON.stringify({
+        repo: cleanRepo,
+        token: cleanToken,
+        branch: cleanBranch,
+        commitMessage: commitMessage || `تحديث بيانات منصة الامتحان المشترك بواسطة لوحة الإدارة (${new Date().toLocaleDateString('ar-EG')}) 🚀`,
+        content: examData
+      })
     });
 
-    if (!putRes.ok) {
-      const errData = await putRes.json().catch(() => ({}));
-      let msg = errData.message || `خطأ رقم ${putRes.status}`;
-      if (putRes.status === 404) {
-        msg = 'المستودع غير موجود أو لا تملك صلاحية الوصول إليه. تأكد من صحة اسم المستودع.';
-      } else if (putRes.status === 409) {
-        msg = 'تعارض في المستودع (Conflict)، جرب إعادة المحاولة.';
-      }
-      throw new Error(`فشل النشر إلى GitHub: ${msg}`);
+    const publishResult = await publishResponse.json().catch(() => ({}));
+    if (!publishResponse.ok) {
+      throw new Error(`فشل النشر إلى GitHub: ${publishResult.error || `خطأ رقم ${publishResponse.status}`}`);
     }
-
-    const resData = await putRes.json();
 
     // حفظ الإعدادات للاستخدام المستقبلي
     saveGitHubConfig({ repo: cleanRepo, token: cleanToken, branch: cleanBranch });
@@ -440,7 +402,7 @@ const DataLayer = (() => {
 
     return {
       success: true,
-      commitUrl: resData.commit?.html_url || `https://github.com/${cleanRepo}/commit/${resData.commit?.sha}`,
+      commitUrl: publishResult.commitUrl || `https://github.com/${cleanRepo}/commit/${publishResult.commitSha || ''}`,
       repoUrl: `https://github.com/${cleanRepo}`,
       branch: cleanBranch,
       date: new Date().toLocaleTimeString('ar-EG')
@@ -462,42 +424,21 @@ const DataLayer = (() => {
       throw new Error('اسم المستودع يجب أن يكون بصيغة: اسم-المستخدم/اسم-المستودع (مثال: ahmed/optics-platform)');
     }
 
-    const repoRes = await fetch(`https://api.github.com/repos/${cleanRepo}`, {
-      headers: {
-        'Authorization': `token ${cleanToken}`,
-        'Accept': 'application/vnd.github.v3+json'
-      }
-    });
-
-    if (!repoRes.ok) {
-      if (repoRes.status === 401) throw new Error('رمز الوصول (GitHub Token) غير صالح أو منتهي الصلاحية.');
-      if (repoRes.status === 404) throw new Error('المستودع غير موجود على GitHub أو أن التوكن لا يملك صلاحية الوصول إليه.');
-      throw new Error(`خطأ في الاتصال بالمستودع (${repoRes.status}). تأكد من إعدادات الـ Token.`);
-    }
-
-    const repoInfo = await repoRes.json();
-
-    // فحص الفرع
-    let branchExists = false;
     try {
-      const branchRes = await fetch(`https://api.github.com/repos/${cleanRepo}/branches/${cleanBranch}`, {
-        headers: {
-          'Authorization': `token ${cleanToken}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
+      const response = await fetch(apiUrl('/api/github/test'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
+        body: JSON.stringify({ repo: cleanRepo, token: cleanToken, branch: cleanBranch })
       });
-      branchExists = branchRes.ok;
-    } catch (e) {}
-
-    return {
-      success: true,
-      repoFullName: repoInfo.full_name,
-      isPrivate: repoInfo.private,
-      branchExists,
-      branchName: cleanBranch,
-      defaultBranch: repoInfo.default_branch,
-      stars: repoInfo.stargazers_count
-    };
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || `تعذر الاتصال بخادم النشر (${response.status}).`);
+      return result;
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error('خادم النشر غير متاح. انشر خدمة Node.js على Render أولاً ثم أعد المحاولة.');
+      }
+      throw error;
+    }
   }
 
   async function resetToDefault() {

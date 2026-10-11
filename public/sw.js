@@ -1,4 +1,4 @@
-const CACHE_NAME = 'optics-platform-v1';
+const CACHE_NAME = 'optics-platform-v2';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './assets/images/logo.svg'];
 
 self.addEventListener('install', event => {

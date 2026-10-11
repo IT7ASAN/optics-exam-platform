@@ -254,6 +254,78 @@ app.post('/api/admin/login', (req, res) => {
   return res.json({ success: true });
 });
 
+app.post('/api/github/test', async (req, res) => {
+  try {
+    if (!isAdminRequest(req)) return res.status(401).json({ error: 'يجب تسجيل دخول المشرف قبل فحص مستودع GitHub.' });
+    const repo = String(req.body?.repo || '').trim().replace(/^https?:\/\/github\.com\//i, '').replace(/\.git$/i, '').replace(/^\/+|\/+$/g, '');
+    const token = String(req.body?.token || '').trim();
+    const branch = String(req.body?.branch || 'main').trim();
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo) || !token) {
+      return res.status(400).json({ error: 'أدخل المستودع بصيغة owner/repo ورمز GitHub صالح.' });
+    }
+
+    const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    const repoResponse = await fetch(`https://api.github.com/repos/${repo}`, { headers });
+    const repoInfo = await repoResponse.json().catch(() => ({}));
+    if (!repoResponse.ok) return res.status(repoResponse.status).json({ error: repoInfo.message || 'تعذر الوصول إلى المستودع أو التوكن.' });
+
+    const branchResponse = await fetch(`https://api.github.com/repos/${repo}/branches/${encodeURIComponent(branch)}`, { headers });
+    return res.json({
+      success: true,
+      repoFullName: repoInfo.full_name,
+      isPrivate: repoInfo.private,
+      branchExists: branchResponse.ok,
+      branchName: branch,
+      defaultBranch: repoInfo.default_branch,
+      stars: repoInfo.stargazers_count
+    });
+  } catch (error: any) {
+    console.error('GitHub connection proxy error:', error);
+    return res.status(502).json({ error: 'تعذر الاتصال بخدمة GitHub من الخادم.' });
+  }
+});
+
+app.post('/api/github/publish-exams', async (req, res) => {
+  try {
+    if (!isAdminRequest(req)) return res.status(401).json({ error: 'يجب تسجيل دخول المشرف قبل نشر البيانات.' });
+    const repo = String(req.body?.repo || '').trim().replace(/^https?:\/\/github\.com\//i, '').replace(/\.git$/i, '').replace(/^\/+|\/+$/g, '');
+    const token = String(req.body?.token || '').trim();
+    const branch = String(req.body?.branch || 'main').trim();
+    const content = req.body?.content;
+    const message = String(req.body?.commitMessage || 'Update exam platform data');
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo) || !token || !content || typeof content !== 'object') {
+      return res.status(400).json({ error: 'بيانات النشر غير مكتملة أو غير صالحة.' });
+    }
+
+    const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    const fileUrl = `https://api.github.com/repos/${repo}/contents/data/exams.json`;
+    const currentResponse = await fetch(`${fileUrl}?ref=${encodeURIComponent(branch)}`, { headers });
+    let sha: string | undefined;
+    if (currentResponse.ok) {
+      const currentFile = await currentResponse.json();
+      sha = currentFile.sha;
+    } else if (currentResponse.status !== 404) {
+      const details = await currentResponse.json().catch(() => ({}));
+      return res.status(currentResponse.status).json({ error: details.message || 'تعذر قراءة ملف البيانات من GitHub.' });
+    }
+
+    const encodedContent = Buffer.from(JSON.stringify(content, null, 2), 'utf8').toString('base64');
+    const payload: Record<string, string> = { message, content: encodedContent, branch };
+    if (sha) payload.sha = sha;
+    const publishResponse = await fetch(fileUrl, {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await publishResponse.json().catch(() => ({}));
+    if (!publishResponse.ok) return res.status(publishResponse.status).json({ error: result.message || 'فشل نشر الملف على GitHub.' });
+    return res.json({ success: true, commitUrl: result.commit?.html_url, commitSha: result.commit?.sha, branch });
+  } catch (error: any) {
+    console.error('GitHub publish proxy error:', error);
+    return res.status(502).json({ error: 'تعذر الاتصال بخدمة GitHub من الخادم.' });
+  }
+});
+
 app.put('/api/users/:id', (req, res) => {
   try {
     if (!isAdminRequest(req)) return res.status(401).json({ error: 'غير مصرح بتعديل الحسابات.' });
