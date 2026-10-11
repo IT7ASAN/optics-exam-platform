@@ -1,6 +1,7 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -8,23 +9,86 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+const DATA_DIR = process.env.DATA_DIR || path.resolve(__dirname, 'data');
+
+type StoredUser = {
+  id: string;
+  username: string;
+  password?: string;
+  passwordHash?: string;
+  passwordSalt?: string;
+  fullName?: string;
+  stage?: string;
+  role?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+};
 
 // دعم استقبال البيانات الكبيرة مثل ملفات PDF بترميز Base64
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // مسارات ملفات البيانات
-const EXAMS_DATA_PATH = path.resolve(__dirname, 'data/exams.json');
-const EXAMS_BACKUP_PATH = path.resolve(__dirname, 'data/exams.last.json');
-const USERS_DATA_PATH = path.resolve(__dirname, 'data/users.json');
+const EXAMS_DATA_PATH = path.join(DATA_DIR, 'exams.json');
+const EXAMS_BACKUP_PATH = path.join(DATA_DIR, 'exams.last.json');
+const USERS_DATA_PATH = path.join(DATA_DIR, 'users.json');
 
 // التأكد من وجود مجلد data والملفات
-if (!fs.existsSync(path.resolve(__dirname, 'data'))) {
-  fs.mkdirSync(path.resolve(__dirname, 'data'), { recursive: true });
+fs.mkdirSync(DATA_DIR, { recursive: true });
+for (const filename of ['exams.json', 'users.json']) {
+  const destination = path.join(DATA_DIR, filename);
+  const bundledDefault = path.resolve(__dirname, 'data', filename);
+  if (!fs.existsSync(destination) && fs.existsSync(bundledDefault)) {
+    fs.copyFileSync(bundledDefault, destination);
+  }
+}
+
+function readUsers(): StoredUser[] {
+  if (!fs.existsSync(USERS_DATA_PATH)) return [];
+  const users = JSON.parse(fs.readFileSync(USERS_DATA_PATH, 'utf8'));
+  return Array.isArray(users) ? users : [];
+}
+
+function writeUsers(users: StoredUser[]): void {
+  fs.writeFileSync(USERS_DATA_PATH, JSON.stringify(users, null, 2), 'utf8');
+}
+
+function hashPassword(password: string, salt = randomBytes(16).toString('hex')) {
+  const hash = scryptSync(password, salt, 64).toString('hex');
+  return { salt, hash };
+}
+
+function passwordMatches(user: StoredUser, password: string): boolean {
+  if (user.passwordHash && user.passwordSalt) {
+    const candidate = scryptSync(password, user.passwordSalt, 64);
+    const saved = Buffer.from(user.passwordHash, 'hex');
+    return saved.length === candidate.length && timingSafeEqual(saved, candidate);
+  }
+  // Migrate older server records that stored plain-text passwords on first login.
+  return user.password === password;
+}
+
+function publicUser(user: StoredUser): Omit<StoredUser, 'password' | 'passwordHash' | 'passwordSalt'> {
+  const { password, passwordHash, passwordSalt, ...safeUser } = user;
+  return safeUser;
+}
+
+function validUsername(username: string): boolean {
+  return /^[a-z][a-z0-9._-]{2,29}$/i.test(username);
+}
+
+function isAdminRequest(req: express.Request) {
+  const configuredPassword = process.env.ADMIN_PASSWORD || '20032003';
+  const suppliedPassword = req.header('x-admin-password') || '';
+  return suppliedPassword.length > 0 && suppliedPassword === configuredPassword;
 }
 
 // توفير الملفات الثابتة مباشرة مع منع كاش ملفات البيانات
 app.use('/files', express.static(path.resolve(__dirname, 'files')));
+app.use('/data', (req, res, next) => {
+  if (req.path === '/users.json') return res.sendStatus(404);
+  next();
+});
 app.use('/data', express.static(path.resolve(__dirname, 'data'), {
   setHeaders: (res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -93,38 +157,123 @@ app.post('/api/exams', (req, res) => {
 // 3. جلب قائمة المستخدمين والطلاب
 app.get('/api/users', (req, res) => {
   try {
-    if (fs.existsSync(USERS_DATA_PATH)) {
-      const content = fs.readFileSync(USERS_DATA_PATH, 'utf8');
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      return res.send(content);
-    }
-    return res.json([]);
+    if (!isAdminRequest(req)) return res.status(401).json({ error: 'يلزم تسجيل دخول المشرف لعرض الحسابات.' });
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.json(readUsers().map(publicUser));
   } catch (err: any) {
     console.error('Error reading users.json:', err);
     return res.status(500).json({ error: err.message });
   }
 });
 
-// 4. حفظ وتحديث قائمة المستخدمين والطلاب
-app.post('/api/users', (req, res) => {
+// Account creation is stored on the shared server, not in an individual browser.
+app.post('/api/register', (req, res) => {
   try {
-    const users = req.body;
-    if (!Array.isArray(users)) {
-      return res.status(400).json({ error: 'قائمة المستخدمين غير صالحة' });
+    const { username, password, fullName, stage } = req.body || {};
+    const cleanUsername = String(username || '').trim().toLowerCase();
+    const cleanPassword = String(password || '').trim();
+    if (!validUsername(cleanUsername)) {
+      return res.status(400).json({ error: 'اسم المستخدم يجب أن يكون إنجليزياً من 3 إلى 30 حرفاً، ويبدأ بحرف.' });
     }
-
-    const jsonString = JSON.stringify(users, null, 2);
-    fs.writeFileSync(USERS_DATA_PATH, jsonString, 'utf8');
-
-    const distUsersPath = path.resolve(__dirname, 'dist/data/users.json');
-    if (fs.existsSync(path.dirname(distUsersPath))) {
-      fs.writeFileSync(distUsersPath, jsonString, 'utf8');
+    if (cleanPassword.length < 8) return res.status(400).json({ error: 'يجب أن يتكون رمز المرور من 8 أحرف على الأقل.' });
+    const users = readUsers();
+    if (users.some(user => String(user.username).toLowerCase() === cleanUsername)) {
+      return res.status(409).json({ error: 'اسم المستخدم مسجل بالفعل، اختر اسماً آخر.' });
     }
+    const { salt, hash } = hashPassword(cleanPassword);
+    const user = {
+      id: `usr-${Date.now()}-${randomBytes(4).toString('hex')}`,
+      username: cleanUsername,
+      passwordHash: hash,
+      passwordSalt: salt,
+      fullName: String(fullName || cleanUsername).trim(),
+      stage: String(stage || 'المرحلة الثانية').trim(),
+      role: 'student',
+      createdAt: new Date().toISOString().slice(0, 10)
+    };
+    users.push(user);
+    writeUsers(users);
+    return res.status(201).json({ success: true, user: publicUser(user) });
+  } catch (err: any) {
+    console.error('Error registering user:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
 
+app.post('/api/login', (req, res) => {
+  try {
+    const username = String(req.body?.username || '').trim().toLowerCase();
+    const password = String(req.body?.password || '').trim();
+    const users = readUsers();
+    const user = users.find(item => String(item.username).toLowerCase() === username);
+    if (!user || !passwordMatches(user, password)) {
+      return res.status(401).json({ error: 'اسم المستخدم أو رمز المرور غير صحيح.' });
+    }
+    if (user.password && !user.passwordHash) {
+      const { salt, hash } = hashPassword(user.password);
+      delete user.password;
+      user.passwordSalt = salt;
+      user.passwordHash = hash;
+      writeUsers(users);
+    }
+    return res.json({ success: true, user: publicUser(user) });
+  } catch (err: any) {
+    console.error('Error logging in user:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/login', (req, res) => {
+  const expectedUsername = 'it7asan';
+  const expectedPassword = process.env.ADMIN_PASSWORD || '20032003';
+  const username = String(req.body?.username || '').trim().toLowerCase();
+  const password = String(req.body?.password || '').trim();
+  if (username !== expectedUsername || password !== expectedPassword) {
+    return res.status(401).json({ error: 'اسم المستخدم أو رمز مرور المشرف غير صحيح.' });
+  }
+  return res.json({ success: true });
+});
+
+app.put('/api/users/:id', (req, res) => {
+  try {
+    if (!isAdminRequest(req)) return res.status(401).json({ error: 'غير مصرح بتعديل الحسابات.' });
+    const users = readUsers();
+    const user = users.find(item => item.id === req.params.id);
+    if (!user) return res.status(404).json({ error: 'الحساب غير موجود.' });
+    const username = String(req.body?.username ?? user.username).trim().toLowerCase();
+    if (!validUsername(username)) return res.status(400).json({ error: 'اسم المستخدم يجب أن يكون إنجليزياً من 3 إلى 30 حرفاً، ويبدأ بحرف.' });
+    if (users.some(item => item.id !== user.id && String(item.username).toLowerCase() === username)) {
+      return res.status(409).json({ error: 'اسم المستخدم مستخدم بالفعل بحساب آخر.' });
+    }
+    user.username = username;
+    if (req.body?.fullName !== undefined) user.fullName = String(req.body.fullName).trim();
+    if (req.body?.stage !== undefined) user.stage = String(req.body.stage).trim();
+    if (req.body?.password) {
+      const password = String(req.body.password).trim();
+      if (password.length < 8) return res.status(400).json({ error: 'يجب أن يتكون رمز المرور من 8 أحرف على الأقل.' });
+      const { salt, hash } = hashPassword(password);
+      user.passwordSalt = salt;
+      user.passwordHash = hash;
+      delete user.password;
+    }
+    writeUsers(users);
+    return res.json({ success: true, user: publicUser(user) });
+  } catch (err: any) {
+    console.error('Error updating user:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/users/:id', (req, res) => {
+  try {
+    if (!isAdminRequest(req)) return res.status(401).json({ error: 'غير مصرح بحذف الحسابات.' });
+    const users = readUsers();
+    const remaining = users.filter(user => user.id !== req.params.id);
+    if (remaining.length === users.length) return res.status(404).json({ error: 'الحساب غير موجود.' });
+    writeUsers(remaining);
     return res.json({ success: true });
   } catch (err: any) {
-    console.error('Error writing users.json:', err);
+    console.error('Error deleting user:', err);
     return res.status(500).json({ error: err.message });
   }
 });

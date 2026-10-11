@@ -196,6 +196,61 @@ input[type="color"].admin-form-input {
   transition: background-color var(--transition-normal), border-color var(--transition-normal);
 }
 
+.install-app-prompt {
+  position: fixed;
+  z-index: 44;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: min(420px, calc(100vw - 2rem));
+  padding: 0.75rem;
+  color: var(--text-primary);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.install-app-prompt[hidden] {
+  display: none;
+}
+
+.install-app-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  flex: 0 0 auto;
+}
+
+.install-app-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.install-app-copy strong {
+  font-size: 0.85rem;
+}
+
+.install-app-copy span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.install-app-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.75rem;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
 [data-theme="dark"] .site-header {
   background: rgba(18, 14, 36, 0.88);
 }
@@ -1643,6 +1698,12 @@ input[type="color"].admin-form-input {
 }
 
 @media (max-width: 767px) {
+  .install-app-prompt {
+    right: 0.75rem;
+    bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 0.75rem);
+    max-width: calc(100vw - 1.5rem);
+  }
+
   #login-modal-backdrop {
     align-items: center;
     padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(0.75rem, env(safe-area-inset-bottom));

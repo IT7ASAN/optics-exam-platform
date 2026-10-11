@@ -14,36 +14,21 @@ const DataLayer = (() => {
   // بيانات حساب المشرف الافتراضية
   const ADMIN_CREDENTIALS = {
     username: 'it7asan',
-    password: '20032003',
     role: 'admin',
     displayName: 'مدير المنصة (it7asan)'
   };
 
-  const DEFAULT_USERS = [
-    {
-      id: 'usr-1',
-      username: 'ahmed_optics',
-      password: '123456user',
-      fullName: 'أحمد علي حسن',
-      stage: 'المرحلة الثالثة',
-      role: 'student',
-      createdAt: '2026-09-20'
-    },
-    {
-      id: 'usr-2',
-      username: 'zahraa_optics',
-      password: '123456user',
-      fullName: 'زهراء محمد كاظم',
-      stage: 'المرحلة الرابعة',
-      role: 'student',
-      createdAt: '2026-09-25'
-    }
-  ];
+  function getAdminHeaders() {
+    const adminPassword = sessionStorage.getItem('optics_admin_api_password');
+    return adminPassword ? { 'X-Admin-Password': adminPassword } : {};
+  }
 
   let examData = null;
   let isLoaded = false;
   let loadPromise = null;
   let isServerAvailable = false;
+  let usersServerAvailable = false;
+  let usersApiError = '';
 
   /**
    * جلب وتحميل بيانات الامتحانات (مع منع الكاش ودعم المزامنة السحابية)
@@ -721,76 +706,93 @@ const DataLayer = (() => {
    */
   async function fetchServerUsers() {
     try {
-      const res = await fetch('/api/users', { cache: 'no-store' });
+      const res = await fetch('/api/users', { cache: 'no-store', headers: getAdminHeaders() });
       if (res.ok) {
         const users = await res.json();
-        if (Array.isArray(users) && users.length > 0) {
+        if (Array.isArray(users)) {
+          usersServerAvailable = true;
+          usersApiError = '';
           localStorage.setItem(USERS_KEY, JSON.stringify(users));
           return users;
         }
       }
-    } catch (e) {}
+      usersServerAvailable = res.status !== 404;
+      const result = await res.json().catch(() => ({}));
+      usersApiError = result.error || (usersServerAvailable ? 'تعذر جلب الحسابات من الخادم.' : 'لا يوجد خادم حسابات على هذا العنوان.');
+    } catch (e) {
+      usersServerAvailable = false;
+      usersApiError = 'تعذر الاتصال بخادم الحسابات.';
+    }
     return null;
   }
 
-  function getRegisteredUsers() {
+  function hasSharedUserServer() {
+    return usersServerAvailable;
+  }
+
+  function getUsersApiError() {
+    return usersApiError;
+  }
+
+  async function getRegisteredUsers(forceRefresh = true) {
+    if (forceRefresh) {
+      const serverUsers = await fetchServerUsers();
+      if (serverUsers) return serverUsers;
+    }
     try {
       const raw = localStorage.getItem(USERS_KEY);
       if (!raw) {
-        localStorage.setItem(USERS_KEY, JSON.stringify(DEFAULT_USERS));
-        fetchServerUsers();
-        return [...DEFAULT_USERS];
+        return [];
       }
-      return JSON.parse(raw);
+      const cachedUsers = JSON.parse(raw);
+      if (!Array.isArray(cachedUsers)) return [];
+      cachedUsers.forEach(user => delete user.password);
+      cacheRegisteredUsers(cachedUsers);
+      return cachedUsers;
     } catch (e) {
-      return [...DEFAULT_USERS];
+      return [];
     }
   }
 
-  async function saveRegisteredUsers(users) {
+  function cacheRegisteredUsers(users) {
     try {
       localStorage.setItem(USERS_KEY, JSON.stringify(users, null, 2));
-      await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(users)
-      });
-      return true;
     } catch (e) {
-      return false;
+      console.warn('Could not cache registered users locally:', e);
     }
   }
 
-  async function registerUser({ username, password, fullName, stage }) {
+  async function registerUser({ username, password, fullName, stage }, startSession = true) {
     if (!username || !password) {
       return { success: false, message: 'يرجى إدخال اسم المستخدم ورمز المرور.' };
     }
     const cleanUser = username.trim().toLowerCase();
-    if (!/^[a-z][a-z0-9._-]*$/.test(cleanUser)) {
-      return { success: false, message: 'اسم المستخدم يجب أن يبدأ بحرف إنجليزي، ويسمح بالأحرف الإنجليزية والأرقام والنقطة والشرطة فقط.' };
+    if (!/^[a-z][a-z0-9._-]{2,29}$/.test(cleanUser)) {
+      return { success: false, message: 'اسم المستخدم يجب أن يكون من 3 إلى 30 حرفاً، يبدأ بحرف إنجليزي، ويسمح بالأرقام والنقطة والشرطة والشرطة السفلية.' };
     }
     if (cleanUser === ADMIN_CREDENTIALS.username.toLowerCase()) {
       return { success: false, message: 'اسم المستخدم هذا محجوز مسبقاً.' };
     }
 
-    const users = getRegisteredUsers();
-    const exists = users.some(u => u.username.toLowerCase() === cleanUser);
-    if (exists) {
-      return { success: false, message: 'اسم المستخدم مسجل بالفعل! يرجى اختيار اسم آخر.' };
+    let response;
+    try {
+      response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanUser, password, fullName, stage })
+      });
+    } catch (error) {
+      return { success: false, message: 'إنشاء الحسابات المشتركة يتطلب استضافة المنصة على خادم Node.js. GitHub Pages لا يحفظ الحسابات.' };
+    }
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.user) {
+      return { success: false, message: result.error || 'خادم الحسابات غير متاح. GitHub Pages لا يدعم إنشاء حسابات مشتركة؛ انشر المنصة على خادم Node.js.' };
     }
 
-    const newUser = {
-      id: `usr-${Date.now()}`,
-      username: cleanUser,
-      password: password.trim(),
-      fullName: (fullName || cleanUser).trim(),
-      stage: stage || 'المرحلة الثانية',
-      role: 'student',
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
+    const newUser = result.user;
+    const users = await getRegisteredUsers(false);
     users.push(newUser);
-    await saveRegisteredUsers(users);
+    cacheRegisteredUsers(users);
 
     const session = {
       isLoggedIn: true,
@@ -800,16 +802,28 @@ const DataLayer = (() => {
       stage: newUser.stage,
       loginTime: new Date().toISOString()
     };
-    localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+    if (startSession) localStorage.setItem(AUTH_KEY, JSON.stringify(session));
 
-    return { success: true, user: newUser, session };
+    return { success: true, user: newUser, session: startSession ? session : null };
   }
 
-  function login(username, password) {
-    const cleanUser = username.trim();
+  async function login(username, password) {
+    const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
 
-    if (cleanUser === ADMIN_CREDENTIALS.username && cleanPass === ADMIN_CREDENTIALS.password) {
+    if (cleanUser === ADMIN_CREDENTIALS.username) {
+      let adminResponse;
+      try {
+        adminResponse = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: cleanUser, password: cleanPass })
+        });
+      } catch (error) {
+        return { success: false, message: 'تسجيل دخول المشرف وإدارة الحسابات يتطلبان خادم Node.js.' };
+      }
+      const adminResult = await adminResponse.json().catch(() => ({}));
+      if (!adminResponse.ok) return { success: false, message: adminResult.error || 'تعذر تسجيل دخول المشرف.' };
       const session = {
         isLoggedIn: true,
         role: 'admin',
@@ -818,11 +832,24 @@ const DataLayer = (() => {
         loginTime: new Date().toISOString()
       };
       localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+      sessionStorage.setItem('optics_admin_api_password', cleanPass);
       return { success: true, session, role: 'admin' };
     }
 
-    const users = getRegisteredUsers();
-    const foundUser = users.find(u => u.username.toLowerCase() === cleanUser.toLowerCase() && u.password === cleanPass);
+    let foundUser = null;
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanUser, password: cleanPass })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok) foundUser = result.user;
+      else if (result.error) return { success: false, message: result.error };
+      else return { success: false, message: 'خادم الحسابات غير متاح. يلزم تشغيل المنصة على خادم Node.js لتسجيل الدخول.' };
+    } catch (error) {
+      return { success: false, message: 'تسجيل الدخول للحسابات المشتركة يتطلب اتصالاً بخادم المنصة.' };
+    }
 
     if (foundUser) {
       const session = {
@@ -843,6 +870,7 @@ const DataLayer = (() => {
 
   function logout() {
     localStorage.removeItem(AUTH_KEY);
+    sessionStorage.removeItem('optics_admin_api_password');
     return true;
   }
 
@@ -868,34 +896,51 @@ const DataLayer = (() => {
   }
 
   async function updateUser(userId, { username, password, fullName, stage }) {
-    const users = getRegisteredUsers();
+    const users = await getRegisteredUsers(false);
     const user = users.find(u => u.id === userId);
     if (!user) return false;
 
     if (username) {
       const cleanUser = username.trim().toLowerCase();
-      if (!/^[a-z][a-z0-9._-]*$/.test(cleanUser)) {
-        return { success: false, message: 'اسم المستخدم يجب أن يبدأ بحرف إنجليزي، ويسمح بالأحرف الإنجليزية والأرقام والنقطة والشرطة فقط.' };
+      if (!/^[a-z][a-z0-9._-]{2,29}$/.test(cleanUser)) {
+        return { success: false, message: 'اسم المستخدم يجب أن يكون من 3 إلى 30 حرفاً، يبدأ بحرف إنجليزي، ويسمح بالأرقام والنقطة والشرطة والشرطة السفلية.' };
       }
       const dup = users.some(u => u.id !== userId && u.username.toLowerCase() === cleanUser);
       if (dup) return { success: false, message: 'اسم المستخدم مستخدم بالفعل بحساب آخر.' };
       user.username = cleanUser;
     }
-    if (password) user.password = password.trim();
-    if (fullName !== undefined) user.fullName = fullName.trim();
-    if (stage !== undefined) user.stage = stage.trim();
-
-    await saveRegisteredUsers(users);
-    return { success: true, user };
+    try {
+      const response = await fetch(`/api/users/${encodeURIComponent(userId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
+        body: JSON.stringify({ username: username || user.username, password, fullName, stage })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) return { success: false, message: result.error || 'تعذر تحديث الحساب.' };
+      Object.assign(user, result.user);
+      cacheRegisteredUsers(users);
+      return { success: true, user };
+    } catch (error) {
+      return { success: false, message: 'تعذر الاتصال بخادم الحسابات.' };
+    }
   }
 
   async function deleteUser(userId) {
-    const users = getRegisteredUsers();
+    const users = await getRegisteredUsers(false);
     const idx = users.findIndex(u => u.id === userId);
     if (idx === -1) return false;
-    users.splice(idx, 1);
-    await saveRegisteredUsers(users);
-    return true;
+    try {
+      const response = await fetch(`/api/users/${encodeURIComponent(userId)}`, {
+        method: 'DELETE',
+        headers: getAdminHeaders()
+      });
+      if (!response.ok) return false;
+      users.splice(idx, 1);
+      cacheRegisteredUsers(users);
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   function getStageById(stageId) {
@@ -981,6 +1026,8 @@ const DataLayer = (() => {
     updateFile,
     deleteFile,
     getRegisteredUsers,
+    hasSharedUserServer,
+    getUsersApiError,
     registerUser,
     login,
     logout,

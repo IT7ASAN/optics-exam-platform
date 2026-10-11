@@ -12,6 +12,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="امتحان البصريات" />
+    <link rel="manifest" href="./manifest.webmanifest" />
 
     <!-- OpenGraph / Social Cards -->
     <meta property="og:title" content="منصة الامتحان المشترك – قسم تقنيات البصريات" />
@@ -91,6 +92,18 @@
         </div>
       </div>
     </header>
+
+    <aside id="install-app-prompt" class="install-app-prompt" hidden aria-label="تثبيت تطبيق المنصة">
+      <img src="./assets/images/logo.svg" alt="" class="install-app-icon" />
+      <div class="install-app-copy">
+        <strong>ثبّت المنصة كتطبيق</strong>
+        <span>وصول أسرع من شاشة تطبيقات هاتفك</span>
+      </div>
+      <button id="install-app-button" type="button" class="btn-primary install-app-button">
+        <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+        <span>تثبيت</span>
+      </button>
+    </aside>
 
     <!-- Main Content Application Views -->
     <main class="app-container" style="flex-grow: 1;">
@@ -633,7 +646,6 @@
                     <th>اسم المستخدم (يوزر نيم)</th>
                     <th>الاسم الكامل</th>
                     <th>المرحلة الدراسية</th>
-                    <th>رمز المرور الحالي</th>
                     <th>تاريخ التسجيل</th>
                     <th>الإجراءات</th>
                   </tr>
@@ -890,12 +902,12 @@
 
             <div class="admin-form-group">
               <label class="admin-form-label" for="reg-username">اسم المستخدم الجديد (بالأحرف الإنجليزية فقط)</label>
-              <input id="reg-username" type="text" class="admin-form-input" placeholder="مثال: ali_optics" required autocomplete="username" pattern="[A-Za-z][A-Za-z0-9._-]*" title="ابدأ بحرف إنجليزي، ثم استخدم أحرفاً إنجليزية أو أرقاماً أو . _ -" autocapitalize="none" spellcheck="false" inputmode="email" />
+              <input id="reg-username" type="text" class="admin-form-input" placeholder="مثال: ali_optics" required autocomplete="username" pattern="[A-Za-z][A-Za-z0-9._-]{2,29}" title="من 3 إلى 30 حرفاً: ابدأ بحرف إنجليزي ثم استخدم أحرفاً إنجليزية أو أرقاماً أو . _ -" autocapitalize="none" spellcheck="false" inputmode="email" />
             </div>
 
             <div class="admin-form-group">
               <label class="admin-form-label" for="reg-password">رمز المرور (كلمة السر)</label>
-              <input id="reg-password" type="password" class="admin-form-input" placeholder="اختر رمز مرور قوي" required autocomplete="new-password" />
+              <input id="reg-password" type="password" class="admin-form-input" placeholder="8 أحرف على الأقل" required minlength="8" autocomplete="new-password" />
             </div>
 
             <div class="admin-form-group">

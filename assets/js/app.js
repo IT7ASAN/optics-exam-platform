@@ -28,6 +28,7 @@ const App = (() => {
     setupEventListeners();
     setupSmoothScrolling();
     setupRouting();
+    setupInstallPrompt();
 
     // تهيئة عارض PDF
     PDFViewer.init({
@@ -56,6 +57,7 @@ const App = (() => {
       showDataLoadError(err.message);
     }
 
+    updateInstallButton();
     refreshIcons();
     setupAutoRefresh();
   }
@@ -190,9 +192,7 @@ const App = (() => {
         if (state.isAdmin) {
           navigateToHash('#admin');
         } else if (state.currentUser) {
-          if (confirm(`مرحباً ${state.currentUser.displayName}! هل ترغب في تسجيل الخروج؟`)) {
-            handleLogout();
-          }
+          handleLogout();
         } else {
           openLoginModal();
         }
@@ -279,9 +279,7 @@ const App = (() => {
           if (state.isAdmin) {
             navigateToHash('#admin');
           } else if (state.currentUser) {
-            if (confirm(`مرحباً ${state.currentUser.displayName}! هل ترغب في تسجيل الخروج؟`)) {
-              handleLogout();
-            }
+            handleLogout();
           } else {
             openLoginModal();
           }
@@ -434,6 +432,7 @@ const App = (() => {
           <span>حسابي</span>
         `;
       }
+      updateInstallButton();
       adminNavLinks.forEach(el => el.style.display = 'none');
     } else {
       if (authBtn) {
@@ -449,8 +448,10 @@ const App = (() => {
           <span>دخول</span>
         `;
       }
+      updateInstallButton();
       adminNavLinks.forEach(el => el.style.display = 'none');
     }
+    updateInstallButton();
     refreshIcons();
   }
 
@@ -486,7 +487,7 @@ const App = (() => {
     }
   }
 
-  function handleLoginSubmit(e) {
+  async function handleLoginSubmit(e) {
     e.preventDefault();
     const usernameInput = document.getElementById('login-username');
     const passwordInput = document.getElementById('login-password');
@@ -495,7 +496,7 @@ const App = (() => {
     const username = usernameInput ? usernameInput.value : '';
     const password = passwordInput ? passwordInput.value : '';
 
-    const res = window.DataLayer.login(username, password);
+    const res = await window.DataLayer.login(username, password);
     if (res.success) {
       if (errorEl) errorEl.style.display = 'none';
       closeLoginModal();
@@ -523,9 +524,9 @@ const App = (() => {
     const stage = document.getElementById('reg-stage').value;
     const errorEl = document.getElementById('login-error-msg');
 
-    if (!/^[A-Za-z][A-Za-z0-9._-]*$/.test(username)) {
+    if (!/^[A-Za-z][A-Za-z0-9._-]{2,29}$/.test(username)) {
       if (errorEl) {
-        errorEl.textContent = 'اسم المستخدم يجب أن يبدأ بحرف إنجليزي، ويسمح بالأحرف الإنجليزية والأرقام والنقطة والشرطة فقط.';
+        errorEl.textContent = 'اسم المستخدم يجب أن يكون من 3 إلى 30 حرفاً، يبدأ بحرف إنجليزي، ويسمح بالأرقام والنقطة والشرطة والشرطة السفلية.';
         errorEl.style.display = 'block';
       }
       usernameInput.focus();
@@ -535,8 +536,10 @@ const App = (() => {
     const res = await window.DataLayer.registerUser({ username, password, fullName, stage });
     if (res.success) {
       if (errorEl) errorEl.style.display = 'none';
+      localStorage.setItem('optics_account_created', 'true');
       closeLoginModal();
       updateAdminUI();
+      updateInstallButton();
       showToast(`تم إنشاء الحساب بنجاح! مرحباً بك يا ${res.user.fullName} 🎉`);
     } else {
       if (errorEl) {
@@ -547,10 +550,59 @@ const App = (() => {
   }
 
   function handleLogout() {
+    const displayName = state.currentUser?.displayName || 'حسابك';
+    if (!confirm(`هل تريد تسجيل الخروج من ${displayName}؟`)) return;
     window.DataLayer.logout();
     updateAdminUI();
     showToast('تم تسجيل الخروج بنجاح 👋');
     navigateToHash('#home');
+  }
+
+  let deferredInstallPrompt = null;
+
+  function isAppInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+
+  function updateInstallButton() {
+    const installPrompt = document.getElementById('install-app-prompt');
+    if (!installPrompt) return;
+    installPrompt.hidden = isAppInstalled() || !!window.DataLayer.getCurrentUser() || localStorage.getItem('optics_account_created') === 'true';
+  }
+
+  function setupInstallPrompt() {
+    const installButton = document.getElementById('install-app-button');
+    if (!installButton) return;
+
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      updateInstallButton();
+    });
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      updateInstallButton();
+      showToast('تم تثبيت المنصة بنجاح على جهازك 📱');
+    });
+    installButton.addEventListener('click', async () => {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        updateInstallButton();
+        return;
+      }
+
+      const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+      showToast(isIos
+        ? 'لتثبيت المنصة على iPhone: اضغط «مشاركة» في Safari ثم «إضافة إلى الشاشة الرئيسية».'
+        : 'من قائمة المتصفح اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».', 6500);
+    });
+
+    updateInstallButton();
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('./sw.js').catch(error => console.warn('تعذر تسجيل Service Worker:', error));
+    }
   }
 
   function openLoginModal() {
@@ -595,6 +647,9 @@ const App = (() => {
           if (state.isAdmin) {
             updateAdminUI();
           }
+        }
+        if (state.isAdmin && state.currentView === 'admin' && !document.hidden) {
+          await renderAdminUsersTable(true);
         }
       } catch (err) {
         console.warn('Auto refresh skipped:', err);
@@ -1726,15 +1781,36 @@ git push -u origin main
   /**
    * إدارة حسابات المستخدمين والطلاب في لوحة الإدارة
    */
-  function renderAdminUsersTable() {
+  async function renderAdminUsersTable(forceRefresh = true) {
     const tbody = document.getElementById('admin-users-table-body');
     if (!tbody) return;
-    const users = window.DataLayer.getRegisteredUsers();
+    const users = await window.DataLayer.getRegisteredUsers(forceRefresh);
+
+    if (forceRefresh && !window.DataLayer.hasSharedUserServer()) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 2rem; color: var(--warning);">
+            خادم الحسابات غير متاح. GitHub Pages لا يدعم حفظ الحسابات المشتركة؛ شغّل الموقع على خادم Node.js لعرض حسابات جميع الأجهزة.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    if (forceRefresh && window.DataLayer.getUsersApiError()) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 2rem; color: var(--warning);">
+            ${window.DataLayer.getUsersApiError()} ${window.DataLayer.getUsersApiError().includes('المشرف') ? 'سجّل الخروج ثم ادخل مجدداً لتحديث صلاحية لوحة الإدارة.' : ''}
+          </td>
+        </tr>
+      `;
+      return;
+    }
 
     if (users.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
             لا توجد حسابات طلاب مسجلة حتى الآن. يمكنك إضافة حساب بالضغط على زر «إنشاء حساب طالب جديد».
           </td>
         </tr>
@@ -1749,7 +1825,6 @@ git push -u origin main
         <td style="font-weight: 700; color: var(--text-primary); font-family: monospace;">${u.username}</td>
         <td>${u.fullName || '-'}</td>
         <td><span class="file-number-tag">${u.stage || 'المرحلة الثانية'}</span></td>
-        <td><code style="background: var(--bg-surface-subtle); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600;">${u.password}</code></td>
         <td style="font-size: 0.8rem; color: var(--text-muted);">${u.createdAt || '-'}</td>
         <td>
           <div style="display: flex; gap: 0.35rem;">
@@ -1784,9 +1859,11 @@ git push -u origin main
           password: vals.m_user_password,
           fullName: vals.m_user_fullname,
           stage: vals.m_user_stage
-        });
+        }, false);
         if (res.success) {
-          renderAdminUsersTable();
+          localStorage.setItem('optics_account_created', 'true');
+          updateInstallButton();
+          await renderAdminUsersTable(false);
           showToast(`تم إنشاء حساب ${vals.m_user_fullname} بنجاح ✨`);
         } else {
           showToast(res.message || 'تعذر إنشاء الحساب.', 4500);
@@ -1795,8 +1872,8 @@ git push -u origin main
     });
   }
 
-  function openEditUserModal(userId) {
-    const users = window.DataLayer.getRegisteredUsers();
+  async function openEditUserModal(userId) {
+    const users = await window.DataLayer.getRegisteredUsers(false);
     const user = users.find(u => u.id === userId);
     if (!user) return;
 
@@ -1805,7 +1882,7 @@ git push -u origin main
       fields: [
         { id: 'm_user_fullname', label: 'الاسم الكامل', value: user.fullName || '' },
         { id: 'm_user_username', label: 'اسم المستخدم (يوزر نيم)', value: user.username },
-        { id: 'm_user_password', label: 'رمز المرور الجديد', value: user.password },
+        { id: 'm_user_password', label: 'رمز مرور جديد (اتركه فارغاً دون تغيير)', value: '', required: false },
         { id: 'm_user_stage', label: 'المرحلة الدراسية', value: user.stage || 'المرحلة الثانية' }
       ],
       onSubmit: async (vals) => {
@@ -1816,7 +1893,7 @@ git push -u origin main
           stage: vals.m_user_stage
         });
         if (res.success) {
-          renderAdminUsersTable();
+          await renderAdminUsersTable(false);
           showToast('تم تعديل بيانات الحساب والرمز بنجاح 🔑');
         } else {
           showToast(res.message || 'تعذر تحديث بيانات الحساب.', 4500);
@@ -1825,11 +1902,11 @@ git push -u origin main
     });
   }
 
-  function deleteUserConfirm(userId, username) {
+  async function deleteUserConfirm(userId, username) {
     if (confirm(`هل أنت متأكد من حذف حساب الطالب "${username}"؟`)) {
-      window.DataLayer.deleteUser(userId);
-      renderAdminUsersTable();
-      showToast('تم حذف الحساب بنجاح 🗑️');
+      const deleted = await window.DataLayer.deleteUser(userId);
+      await renderAdminUsersTable(false);
+      showToast(deleted ? 'تم حذف الحساب بنجاح 🗑️' : 'تعذر حذف الحساب من الخادم.', 4000);
     }
   }
 
