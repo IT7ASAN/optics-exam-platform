@@ -1,12 +1,7 @@
-const CACHE_NAME = 'optics-platform-v5';
-const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './assets/images/logo.svg'];
+const CACHE_NAME = 'optics-platform-v6';
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', event => {
@@ -22,19 +17,6 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.includes('/api/') || url.pathname.endsWith('.json')) return;
 
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
-          return response;
-        })
-        .catch(() => caches.match('./index.html'))
-    );
-    return;
-  }
-
   const networkRequest = request.destination === 'script'
     ? new Request(request, { cache: 'no-store' })
     : request;
@@ -42,12 +24,8 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(networkRequest)
       .then(response => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-        }
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(() => new Response('Network unavailable', { status: 503, statusText: 'Network unavailable' }))
   );
 });
