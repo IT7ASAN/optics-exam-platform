@@ -21,14 +21,19 @@ const App = (() => {
    * نقطة الدخول الرئيسية
    */
   async function init() {
-    state.currentUser = window.DataLayer.getCurrentUser();
-    state.isAdmin = window.DataLayer.isAdminLoggedIn();
+    try {
+      if (!window.DataLayer) {
+        throw new Error('تعذر تحميل وحدة البيانات. تأكد من فتح الموقع عبر خادم ويب (مثل npm start) وليس كملف مباشر.');
+      }
 
-    setupTheme();
-    setupEventListeners();
-    setupSmoothScrolling();
-    setupRouting();
-    if (await setupInstallPrompt()) return;
+      state.currentUser = window.DataLayer.getCurrentUser();
+      state.isAdmin = window.DataLayer.isAdminLoggedIn();
+
+      setupTheme();
+      setupEventListeners();
+      setupSmoothScrolling();
+      setupRouting();
+      bindInstallPrompt();
 
     // تهيئة عارض PDF
     PDFViewer.init({
@@ -42,24 +47,26 @@ const App = (() => {
       subtitleEl: document.getElementById('pdf-header-subtitle')
     });
 
-    // جلب البيانات وبناء الواجهة
-    try {
+      // جلب البيانات وبناء الواجهة بمهلة استجابة سريعة
       showGlobalLoading(true);
-      state.data = await window.DataLayer.loadData();
+      state.data = await Promise.race([
+        window.DataLayer.loadData(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('استغرق تحميل بيانات المنصة وقتاً أطول من المتوقع. تحقق من الاتصال ثم أعد تحميل الصفحة.')), 5000))
+      ]);
       showGlobalLoading(false);
 
       updateGlobalBranding(state.data);
       updateAdminUI();
       handleHashChange();
+
+      refreshIcons();
+      setupAutoRefresh();
+      cleanupLegacyGitHubServiceWorker();
     } catch (err) {
       console.error('Initialization error:', err);
       showGlobalLoading(false);
-      showDataLoadError(err.message);
+      showDataLoadError(err?.message || 'حدث خطأ غير متوقع أثناء تشغيل المنصة.');
     }
-
-    updateInstallButton();
-    refreshIcons();
-    setupAutoRefresh();
   }
 
   /**
@@ -564,61 +571,77 @@ const App = (() => {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   }
 
-  function updateInstallButton() {
-    const installPrompt = document.getElementById('install-app-prompt');
-    const aboutInstallCard = document.querySelector('.about-install-card');
-    const shouldHide = isAppInstalled() || !!window.DataLayer.getCurrentUser() || localStorage.getItem('optics_account_created') === 'true';
-    if (installPrompt) installPrompt.hidden = shouldHide;
-    if (aboutInstallCard) aboutInstallCard.hidden = shouldHide;
-  }
+  const GITHUB_SW_CLEANUP_KEY = 'optics_github_sw_cleanup_v1';
 
-  async function setupInstallPrompt() {
-    const installButtons = document.querySelectorAll('#install-app-button, #about-install-app-button');
-    if (!installButtons.length) return false;
+  function bindInstallPrompt() {
+    const toggleBtn = document.getElementById('about-install-toggle-btn');
+    const guide = document.getElementById('about-install-guide');
+    const pwaDirectBtn = document.getElementById('pwa-direct-install-btn');
+    const pwaDirectWrap = document.getElementById('pwa-direct-install-wrap');
+
+    if (toggleBtn && guide) {
+      toggleBtn.addEventListener('click', () => {
+        const isHidden = guide.style.display === 'none';
+        guide.style.display = isHidden ? 'block' : 'none';
+        toggleBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+        const btnText = document.getElementById('about-install-btn-text');
+        if (btnText) {
+          btnText.textContent = isHidden ? 'إخفاء الشرح ✕' : 'طريقة تثبيت التطبيق';
+        }
+        refreshIcons();
+      });
+    }
 
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
       deferredInstallPrompt = event;
-      updateInstallButton();
+      if (pwaDirectWrap) pwaDirectWrap.style.display = 'block';
     });
+
     window.addEventListener('appinstalled', () => {
       deferredInstallPrompt = null;
-      updateInstallButton();
+      if (pwaDirectWrap) pwaDirectWrap.style.display = 'none';
       showToast('تم تثبيت المنصة بنجاح على جهازك 📱');
     });
-    const promptInstall = async () => {
-      if (deferredInstallPrompt) {
-        deferredInstallPrompt.prompt();
-        const choice = await deferredInstallPrompt.userChoice;
-        deferredInstallPrompt = null;
-        if (choice?.outcome === 'accepted') updateInstallButton();
-        return;
-      }
 
-      const isIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-      showToast(isIos
-        ? 'لتثبيت المنصة على iPhone: اضغط «مشاركة» في Safari ثم «إضافة إلى الشاشة الرئيسية».'
-        : 'من قائمة المتصفح اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».', 6500);
-      };
-      installButtons.forEach(button => button.addEventListener('click', promptInstall));
-
-    updateInstallButton();
-    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-      if (window.location.hostname.endsWith('.github.io')) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        const cleanupRequested = sessionStorage.getItem('optics_sw_cleanup_requested') === 'true';
-        if (registrations.length && !cleanupRequested) {
-          sessionStorage.setItem('optics_sw_cleanup_requested', 'true');
-          await Promise.all(registrations.map(registration => registration.unregister()));
-          window.location.reload();
-          return true;
+    if (pwaDirectBtn) {
+      pwaDirectBtn.addEventListener('click', async () => {
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          const choice = await deferredInstallPrompt.userChoice;
+          deferredInstallPrompt = null;
+          if (choice?.outcome === 'accepted') {
+            if (pwaDirectWrap) pwaDirectWrap.style.display = 'none';
+          }
         }
-        if (!registrations.length) sessionStorage.removeItem('optics_sw_cleanup_requested');
-      } else {
-        navigator.serviceWorker.register('./sw.js').catch(error => console.warn('تعذر تسجيل Service Worker:', error));
-      }
+      });
     }
-    return false;
+
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http') && !window.location.hostname.endsWith('.github.io')) {
+      navigator.serviceWorker.register('./sw.js').catch(error => console.warn('تعذر تسجيل Service Worker:', error));
+    }
+  }
+
+  /** إزالة Service Worker القديم على GitHub Pages في الخلفية دون إعادة تحميل الصفحة */
+  async function cleanupLegacyGitHubServiceWorker() {
+    if (!('serviceWorker' in navigator) || !window.location.protocol.startsWith('http')) return;
+    if (!window.location.hostname.endsWith('.github.io')) return;
+    if (localStorage.getItem(GITHUB_SW_CLEANUP_KEY) === '1') return;
+
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      if (registrations.length) {
+        await Promise.all(registrations.map(registration => registration.unregister()));
+      }
+      if ('caches' in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.filter(key => key.startsWith('optics-platform-v')).map(key => caches.delete(key)));
+      }
+      localStorage.setItem(GITHUB_SW_CLEANUP_KEY, '1');
+      sessionStorage.removeItem('optics_sw_cleanup_requested');
+    } catch (e) {
+      console.warn('تعذر إكمال تنظيف Service Worker في الخلفية:', e);
+    }
   }
 
   function openLoginModal() {
@@ -1097,20 +1120,24 @@ const App = (() => {
       if (openTabBtn) {
         openTabBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          window.open(file.path, '_blank', 'noopener,noreferrer');
+          window.PDFViewer.openPdfFile(file.path)
+            .then(() => showToast('تم فتح المحاضرة في نافذة جديدة ↗️'))
+            .catch(err => {
+              console.error('تعذر فتح المحاضرة:', err);
+              showToast('تعذر فتح الملف في نافذة جديدة. اسمح بالنوافذ المنبثقة.', 3500);
+            });
         });
       }
 
       if (downloadBtn) {
         downloadBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const a = document.createElement('a');
-          a.href = file.path;
-          a.download = `${file.title}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          showToast(`جاري تنزيل: ${file.title}`);
+          showToast(`جاري تجهيز تنزيل: ${file.title}... 📥`, 2000);
+          window.PDFViewer.downloadPdfFile(file.path, file.title || 'lecture.pdf')
+            .catch(err => {
+              console.error('تعذر تنزيل المحاضرة:', err);
+              showToast('تعذر تنزيل الملف، جرب فتحه في نافذة جديدة.', 3500);
+            });
         });
       }
 
@@ -1589,8 +1616,19 @@ const App = (() => {
 
   async function downloadFullProjectZip() {
     if (typeof JSZip === 'undefined') {
-      showToast('جاري تحميل أداة حزم الملفات (JSZip)... يرجى الانتظار 3 ثوانٍ والمحاولة مرة أخرى', 3500);
-      return;
+      showToast('جاري تحميل أداة حزم الملفات (JSZip)... 📦', 2500);
+      try {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      } catch (e) {
+        showToast('تعذر تحميل أداة الحزم JSZip. تحقق من اتصال الإنترنت.', 3500);
+        return;
+      }
     }
 
     showGlobalLoading(true);
@@ -1964,7 +2002,10 @@ git push -u origin main
             if (file) {
               const reader = new FileReader();
               reader.onload = (loadEvt) => {
-                localUploadedDataUrl = loadEvt.target.result;
+                const raw = String(loadEvt.target.result || '');
+                const base64Index = raw.indexOf('base64,');
+                const payload = base64Index !== -1 ? raw.slice(base64Index + 7) : raw;
+                localUploadedDataUrl = `data:application/pdf;base64,${payload.replace(/\s/g, '')}`;
                 localUploadedFileName = file.name;
                 localUploadedSize = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
 
@@ -2051,7 +2092,11 @@ git push -u origin main
             if (f) {
               const reader = new FileReader();
               reader.onload = (loadEvt) => {
-                localUploadedDataUrl = loadEvt.target.result;
+                const raw = String(loadEvt.target.result || '');
+                const base64Index = raw.indexOf('base64,');
+                const payload = base64Index !== -1 ? raw.slice(base64Index + 7) : raw;
+                localUploadedDataUrl = `data:application/pdf;base64,${payload.replace(/\s/g, '')}`;
+                localUploadedFileName = f.name;
                 localUploadedSize = (f.size / (1024 * 1024)).toFixed(1) + ' MB';
                 const sizeInput = document.getElementById('m_file_size');
                 const pathInput = document.getElementById('m_file_path');
@@ -2269,6 +2314,20 @@ git push -u origin main
   }
 
   function showViewContainer(activeContainerId) {
+    // إخفاء شرح تثبيت التطبيق تلقائياً عند الانتقال إلى أي صفحة أخرى
+    if (activeContainerId !== 'about-view') {
+      const guide = document.getElementById('about-install-guide');
+      const toggleBtn = document.getElementById('about-install-toggle-btn');
+      if (guide && guide.style.display !== 'none') {
+        guide.style.display = 'none';
+        if (toggleBtn) {
+          toggleBtn.setAttribute('aria-expanded', 'false');
+          const btnText = document.getElementById('about-install-btn-text');
+          if (btnText) btnText.textContent = 'طريقة تثبيت التطبيق';
+        }
+      }
+    }
+
     const viewContainers = [
       'home-view',
       'stage-view',
@@ -2401,6 +2460,8 @@ git push -u origin main
   }
 
   function showDataLoadError(errorMsg) {
+    const loader = document.getElementById('global-loading-screen');
+    if (loader) loader.style.display = 'none';
     const errorBox = document.getElementById('global-error-screen');
     if (errorBox) {
       errorBox.style.display = 'flex';
@@ -2444,4 +2505,22 @@ git push -u origin main
   };
 })();
 
-document.addEventListener('DOMContentLoaded', App.init);
+function bootApp() {
+  App.init().catch(err => {
+    console.error('Unhandled init failure:', err);
+    const loader = document.getElementById('global-loading-screen');
+    if (loader) loader.style.display = 'none';
+    const errorBox = document.getElementById('global-error-screen');
+    if (errorBox) {
+      errorBox.style.display = 'flex';
+      const detail = errorBox.querySelector('.error-detail');
+      if (detail) detail.textContent = err?.message || 'تعذر تشغيل المنصة.';
+    }
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootApp);
+} else {
+  bootApp();
+}

@@ -388,21 +388,25 @@ app.post('/api/upload-pdf', (req, res) => {
     }
 
     const safeFilename = filename.replace(/[^a-zA-Z0-9_\u0600-\u06FF.-]/g, '_');
-    const filePath = path.join(targetDir, safeFilename);
+    const finalFilename = safeFilename.endsWith('.pdf') ? safeFilename : `${safeFilename}.pdf`;
+    const filePath = path.join(targetDir, finalFilename);
 
-    // استخراج بيانات base64 وحفظ الملف
-    const cleanBase64 = base64Data.replace(/^data:application\/pdf;base64,/, '');
+    // استخراج بيانات base64 بدقة وتنظيف أي مسافات أو بادئات MIME مختلفة
+    const cleanBase64 = (base64Data.includes(',')
+      ? base64Data.slice(base64Data.indexOf(',') + 1)
+      : base64Data
+    ).replace(/\s/g, '');
     const buffer = Buffer.from(cleanBase64, 'base64');
     fs.writeFileSync(filePath, buffer);
 
     // تحديث مجلد dist إن وجد
-    const distFilePath = path.resolve(__dirname, `dist/files/${cleanStage}/${cleanSub}/${safeFilename}`);
+    const distFilePath = path.resolve(__dirname, `dist/files/${cleanStage}/${cleanSub}/${finalFilename}`);
     const distDir = path.dirname(distFilePath);
     if (fs.existsSync(distDir)) {
       fs.writeFileSync(distFilePath, buffer);
     }
 
-    const publicPath = `files/${cleanStage}/${cleanSub}/${safeFilename}`;
+    const publicPath = `files/${cleanStage}/${cleanSub}/${finalFilename}`;
     console.log(`✅ تم حفظ الملف بنجاح على الخادم: ${publicPath}`);
 
     return res.json({ success: true, path: publicPath });

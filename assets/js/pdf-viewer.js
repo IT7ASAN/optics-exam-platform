@@ -1,17 +1,110 @@
 /**
  * Optics Common Exam Platform - In-App PDF Viewer
- * قارئ ملفات PDF متكامل ومحسّن للهاتف والكمبيوتر مع تكبير وتصفح الصفحات
+ * قارئ ملفات PDF متكامل ومحسّن للهاتف والكمبيوتر مع دعم كامل للخطوط العربية ومنع تقطع الكلمات
  */
 
 const PDFViewer = (() => {
+  const PDF_DATA_PREFIX = 'data:application/pdf;base64,';
+  const PDFJS_VERSION = '3.11.174';
+
+  // روابط جداول الحروف والخطوط القياسية من CDN الرسمي لـ pdfjs-dist
+  const CMAP_URL = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/cmaps/`;
+  const STANDARD_FONTS_URL = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/standard_fonts/`;
+  const WORKER_SRC = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`;
+
   let currentPdfDoc = null;
   let currentPageNum = 1;
   let totalNumPages = 0;
   let currentScale = 1.25;
   let isPageRendering = false;
   let pageNumPending = null;
+  let currentRenderTask = null;
   let currentFilePath = '';
   let currentFileMeta = null;
+  let currentObjectUrl = '';
+  let currentPdfBytes = null;
+
+  // ذاكرة مؤقتة للملفات المحملة لمنع إعادة التنزيل عند إعادة فتح المحاضرة
+  const pdfBytesCache = new Map();
+  const MAX_CACHED_DOCS = 6;
+
+  function isEmbeddedPdfData(filePath) {
+    if (!filePath || typeof filePath !== 'string') return false;
+    return filePath.startsWith('data:') || filePath.includes(';base64,');
+  }
+
+  function normalizeBase64Payload(value) {
+    let payload = String(value || '');
+    if (payload.includes(',')) {
+      payload = payload.slice(payload.indexOf(',') + 1);
+    }
+    return payload.replace(/\s/g, '');
+  }
+
+  function decodeBase64ToUint8Array(base64Payload) {
+    const cleanPayload = normalizeBase64Payload(base64Payload);
+    const binary = atob(cleanPayload);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  async function resolvePdfBytes(filePath) {
+    if (!filePath) {
+      throw new Error('مسار الملف غير محدد.');
+    }
+    if (pdfBytesCache.has(filePath)) {
+      return pdfBytesCache.get(filePath);
+    }
+    let bytes;
+    if (isEmbeddedPdfData(filePath)) {
+      bytes = decodeBase64ToUint8Array(filePath);
+    } else {
+      const response = await fetch(filePath, { cache: 'default' });
+      if (!response.ok) {
+        throw new Error(`تعذر تحميل ملف PDF (${response.status})`);
+      }
+      bytes = new Uint8Array(await response.arrayBuffer());
+    }
+    if (pdfBytesCache.size >= MAX_CACHED_DOCS) {
+      const firstKey = pdfBytesCache.keys().next().value;
+      pdfBytesCache.delete(firstKey);
+    }
+    pdfBytesCache.set(filePath, bytes);
+    return bytes;
+  }
+
+  function bytesToObjectUrl(bytes) {
+    return URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+  }
+
+  function revokeCurrentObjectUrl() {
+    if (currentObjectUrl) {
+      try {
+        URL.revokeObjectURL(currentObjectUrl);
+      } catch (e) {}
+      currentObjectUrl = '';
+    }
+  }
+
+  /**
+   * خيارات محرك PDF.js - معالجة خطوط النصوص العربية بدقة تامة لمنع تقطع الحروف
+   */
+  function getPdfJsDocumentOptions(bytes) {
+    return {
+      data: bytes,
+      cMapUrl: CMAP_URL,
+      cMapPacked: true,
+      standardFontDataUrl: STANDARD_FONTS_URL,
+      disableFontFace: false,
+      useSystemFonts: false, // يمنع استبدال خط المستند بخطوط النظام مما يحافظ على ترابط وتشكيل الحروف العربية
+      fontExtraProperties: true,
+      isEvalSupported: false
+    };
+  }
 
   // DOM Elements
   let containerEl = null;
@@ -40,10 +133,16 @@ const PDFViewer = (() => {
     titleEl = elements.titleEl;
     subtitleEl = elements.subtitleEl;
 
-    // تهيئة عمال PDF.js إن توفرت
+    // تهيئة عمال PDF.js إن توفرت والتحميل المسبق في الخلفية
     if (window.pdfjsLib) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_SRC;
+      try {
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(() => {
+            fetch(WORKER_SRC, { mode: 'no-cors' }).catch(() => {});
+          });
+        }
+      } catch (e) {}
     }
 
     // دعم إيماءات اللمس للهاتف (Swipe للتنقل بين الصفحات)
@@ -57,6 +156,8 @@ const PDFViewer = (() => {
     currentFilePath = filePath;
     currentFileMeta = meta || {};
     currentPageNum = 1;
+    revokeCurrentObjectUrl();
+    currentPdfBytes = null;
 
     // تحديث العناوين
     if (titleEl) titleEl.textContent = meta.title || 'ملف المحاضرة';
@@ -73,29 +174,23 @@ const PDFViewer = (() => {
     }
 
     try {
+      if (currentRenderTask) {
+        try {
+          currentRenderTask.cancel();
+        } catch (e) {}
+        currentRenderTask = null;
+      }
+
       if (currentPdfDoc) {
         currentPdfDoc.destroy();
         currentPdfDoc = null;
       }
 
-      let docConfig = {
-        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-        cMapPacked: true
-      };
+      const bytes = await resolvePdfBytes(filePath);
+      currentPdfBytes = bytes;
+      currentObjectUrl = bytesToObjectUrl(bytes);
 
-      if (filePath.startsWith('data:application/pdf;base64,')) {
-        const base64Data = filePath.replace('data:application/pdf;base64,', '');
-        const rawData = atob(base64Data);
-        const bytes = new Uint8Array(rawData.length);
-        for (let i = 0; i < rawData.length; i++) {
-          bytes[i] = rawData.charCodeAt(i);
-        }
-        docConfig.data = bytes;
-      } else {
-        docConfig.url = filePath;
-      }
-
-      const loadingTask = window.pdfjsLib.getDocument(docConfig);
+      const loadingTask = window.pdfjsLib.getDocument(getPdfJsDocumentOptions(bytes));
 
       currentPdfDoc = await loadingTask.promise;
       totalNumPages = currentPdfDoc.numPages;
@@ -115,10 +210,18 @@ const PDFViewer = (() => {
   }
 
   /**
-   * رسم صفحة محددة على عنصر Canvas
+   * رسم صفحة محددة على عنصر Canvas بأعلى دقة وضوح
    */
   async function renderPage(num) {
     if (!currentPdfDoc || !canvasEl) return;
+
+    if (currentRenderTask) {
+      try {
+        currentRenderTask.cancel();
+      } catch (e) {}
+      currentRenderTask = null;
+    }
+
     isPageRendering = true;
     showLoading(true);
 
@@ -126,22 +229,27 @@ const PDFViewer = (() => {
       const page = await currentPdfDoc.getPage(num);
       
       const viewport = page.getViewport({ scale: currentScale });
-      const pixelRatio = window.devicePixelRatio || 1;
+      // ضبط مضاعف الدقة بين 1 و 1.75 لضمان قراءة فائقة النقاء دون إبطاء الهاتف أو استهلاك الذاكرة
+      const pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 1.75);
 
-      canvasEl.height = viewport.height * pixelRatio;
-      canvasEl.width = viewport.width * pixelRatio;
-      canvasEl.style.width = `${viewport.width}px`;
-      canvasEl.style.height = `${viewport.height}px`;
+      canvasEl.height = Math.floor(viewport.height * pixelRatio);
+      canvasEl.width = Math.floor(viewport.width * pixelRatio);
+      canvasEl.style.width = `${Math.floor(viewport.width)}px`;
+      canvasEl.style.height = `${Math.floor(viewport.height)}px`;
 
       ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
       const renderContext = {
         canvasContext: ctx,
-        viewport: viewport
+        viewport,
+        intent: 'display'
       };
 
-      const renderTask = page.render(renderContext);
-      await renderTask.promise;
+      currentRenderTask = page.render(renderContext);
+      await currentRenderTask.promise;
+      currentRenderTask = null;
 
       isPageRendering = false;
       showLoading(false);
@@ -155,6 +263,9 @@ const PDFViewer = (() => {
       if (pageNumSpan) pageNumSpan.textContent = num;
       updateControlStates();
     } catch (err) {
+      if (err?.name === 'RenderingCancelledException') {
+        return;
+      }
       console.error('خطأ أثناء عرض الصفحة:', err);
       isPageRendering = false;
       showLoading(false);
@@ -221,7 +332,7 @@ const PDFViewer = (() => {
     const containerWidth = containerEl.clientWidth || window.innerWidth;
     if (containerWidth < 600) {
       // شاشات الهواتف
-      currentScale = Math.max(0.7, (containerWidth - 32) / 595);
+      currentScale = Math.max(0.75, (containerWidth - 32) / 595);
     } else if (containerWidth < 1024) {
       // شاشات التابلت
       currentScale = (containerWidth - 64) / 595;
@@ -246,50 +357,86 @@ const PDFViewer = (() => {
   }
 
   /**
-   * تنزيل الملف الحالي مباشرة
+   * تنزيل أي ملف PDF بسلامة تامة عبر Blob Object URL
+   * هذا يمنع بشكل قاطع اقتطاع الملفات أو تلف الخطوط الناتج عن حدود Data URL في المتصفحات
    */
-  function downloadCurrentFile() {
-    if (!currentFilePath) return;
+  async function downloadPdfFile(filePath, filename = 'lecture.pdf') {
+    const bytes = currentPdfBytes && filePath === currentFilePath
+      ? currentPdfBytes
+      : await resolvePdfBytes(filePath);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = currentFilePath;
-    a.download = currentFileMeta.title ? `${currentFileMeta.title}.pdf` : 'lecture.pdf';
+    a.href = url;
+    const cleanName = (filename || 'lecture.pdf').trim();
+    a.download = cleanName.endsWith('.pdf') ? cleanName : `${cleanName}.pdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 20000);
+  }
+
+  function downloadCurrentFile() {
+    if (!currentFilePath) return;
+    const name = currentFileMeta && currentFileMeta.title ? `${currentFileMeta.title}.pdf` : 'lecture.pdf';
+    downloadPdfFile(currentFilePath, name).catch(err => console.error('تعذر تنزيل PDF:', err));
   }
 
   /**
-   * فتح الملف في لسان نافذة جديدة
+   * فتح الملف في لسان نافذة جديدة باستخدام Blob Object URL
+   * يضمن تشغيل القارئ الأصلي للنظام بدون حجب متصفح Chrome لروابط data:
    */
+  async function openPdfFile(filePath) {
+    const bytes = currentPdfBytes && filePath === currentFilePath
+      ? currentPdfBytes
+      : await resolvePdfBytes(filePath);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const tab = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!tab) {
+      URL.revokeObjectURL(url);
+      throw new Error('تعذر فتح نافذة جديدة. يرجى السماح بالنوافذ المنبثقة من إعدادات المتصفح ثم المحاولة ثانية.');
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
   function openInNewTab() {
     if (!currentFilePath) return;
-    window.open(currentFilePath, '_blank', 'noopener,noreferrer');
+    openPdfFile(currentFilePath).catch(err => {
+      console.error('تعذر فتح PDF:', err);
+      alert(err.message || 'تعذر فتح الملف في نافذة جديدة.');
+    });
   }
 
   /**
    * عارض احتياطي في حال عدم عمل Canvas أو PDF.js
    */
   function renderFallbackViewer(filePath, errMsg = '') {
-    const viewportEl = containerEl.querySelector('.pdf-canvas-viewport');
+    const viewportEl = containerEl ? containerEl.querySelector('.pdf-canvas-viewport') : null;
     if (!viewportEl) return;
 
     viewportEl.innerHTML = `
-      <div class="pdf-state-overlay">
+      <div class="pdf-state-overlay" style="display: flex;">
         <div style="font-size: 2.5rem; color: var(--accent);">📄</div>
-        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">عرض ملف المحاضرة</h3>
-        <p style="font-size: 0.85rem; color: var(--text-secondary); max-width: 440px;">
-          ${errMsg ? `تعذر تشغيل العارض المباشر: ${errMsg}.` : 'يمكنك قراءة الملف وتصفحه مباشرة من خلال المتصفح أو تنزيله.'}
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0.5rem 0;">عرض ملف المحاضرة</h3>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); max-width: 440px; margin-bottom: 1.25rem;">
+          ${errMsg ? `تنبيه: ${errMsg}.` : 'يمكنك فتح الملف مباشرة بالقارئ المعتمد لمتصفحك أو تنزيله بكامل دقة الخطوط الأصلية.'}
         </p>
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; margin-top: 1rem;">
-          <a href="${filePath}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="padding: 0.65rem 1.25rem;">
-            فتح الملف في نافذة جديدة
-          </a>
-          <button onclick="PDFViewer.downloadCurrentFile()" class="btn-file-read" style="padding: 0.65rem 1.25rem;">
-            تنزيل ملف PDF
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
+          <button id="pdf-fallback-open-btn" class="btn-primary" style="padding: 0.65rem 1.25rem; font-size: 0.85rem;">
+            فتح في نافذة جديدة
+          </button>
+          <button id="pdf-fallback-download-btn" class="btn-file-read" style="padding: 0.65rem 1.25rem; font-size: 0.85rem;">
+            تنزيل ملف المحاضرة
           </button>
         </div>
       </div>
     `;
+
+    const openBtn = viewportEl.querySelector('#pdf-fallback-open-btn');
+    if (openBtn) openBtn.addEventListener('click', () => openPdfFile(filePath).catch(console.error));
+    const dlBtn = viewportEl.querySelector('#pdf-fallback-download-btn');
+    if (dlBtn) dlBtn.addEventListener('click', () => downloadCurrentFile());
   }
 
   function showLoading(show) {
@@ -336,10 +483,8 @@ const PDFViewer = (() => {
       const diff = touchEndX - touchStartX;
       if (Math.abs(diff) > 50) {
         if (diff > 0) {
-          // سحب لليمين (في الاتجاه العربي: الصفحة التالية أو السابقة حسب التنسيق)
           prevPage();
         } else {
-          // سحب لليسار
           nextPage();
         }
       }
@@ -356,7 +501,9 @@ const PDFViewer = (() => {
     fitToWidth,
     toggleFullscreen,
     downloadCurrentFile,
-    openInNewTab
+    openInNewTab,
+    downloadPdfFile,
+    openPdfFile
   };
 })();
 

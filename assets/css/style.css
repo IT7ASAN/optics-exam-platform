@@ -1202,7 +1202,7 @@ input[type="color"].admin-form-input {
   box-shadow: var(--shadow-md);
   border-radius: 4px;
   max-width: 100%;
-  height: auto;
+  image-rendering: auto;
 }
 
 .pdf-state-overlay {
@@ -1626,6 +1626,95 @@ input[type="color"].admin-form-input {
   .about-install-card .install-app-button {
     width: 100%;
   }
+}
+
+.about-install-guide-panel {
+  margin-top: -0.75rem;
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  border: 1.5px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-md);
+  animation: fadeIn 0.25s ease;
+}
+
+.guide-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 820px) {
+  .guide-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.guide-card {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.guide-card:hover {
+  border-color: var(--accent);
+}
+
+.guide-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.guide-card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--accent-light);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.guide-card h4 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.15rem;
+}
+
+.guide-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.guide-steps-list {
+  margin: 0;
+  padding-right: 1.2rem;
+  padding-left: 0;
+  font-size: 0.81rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.guide-steps-list li strong {
+  color: var(--text-primary);
 }
 
 .empty-state {

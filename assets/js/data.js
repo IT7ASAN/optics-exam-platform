@@ -53,6 +53,17 @@ const DataLayer = (() => {
   let usersApiError = '';
   let apiRetryAfter = 0;
 
+  function sanitizeLegacyStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw && (raw.includes('data:application/pdf;base64,') || raw.length > 500000)) {
+        console.warn('تطهير الذاكرة المحلية القديمة لتسريع تشغيل المنصة 🚀');
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(LAST_SNAPSHOT_KEY);
+      }
+    } catch (e) {}
+  }
+
   /**
    * جلب وتحميل بيانات الامتحانات (مع منع الكاش ودعم المزامنة السحابية)
    */
@@ -64,29 +75,31 @@ const DataLayer = (() => {
       return loadPromise;
     }
 
+    sanitizeLegacyStorage();
+
     loadPromise = (async () => {
       try {
         let fetchedData = null;
         const cacheBuster = `?t=${Date.now()}`;
 
-        // 1. محاولة جلب أحدث البيانات الحية من الخادم المشترك (Server API) إذا كان متاحاً
+        // 1. فحص الخادم المشترك (Server API) إذا كان متاحاً بمهلة فائقة السرعة (1200ms)
         if (isBackendConfigured() && Date.now() >= apiRetryAfter) {
           try {
-            const apiRes = await fetch(apiUrl(`/api/exams${cacheBuster}`), {
+            const apiRes = await fetchWithTimeout(apiUrl(`/api/exams${cacheBuster}`), {
               cache: 'no-store',
               headers: { 'Accept': 'application/json' }
-            });
+            }, 1200);
             if (apiRes.ok) {
               fetchedData = await apiRes.json();
               isServerAvailable = true;
               apiRetryAfter = 0;
             } else {
               isServerAvailable = false;
-              if (apiRes.status === 404 || apiRes.status === 405) apiRetryAfter = Date.now() + 60000;
+              if (apiRes.status === 404 || apiRes.status === 405) apiRetryAfter = Date.now() + 120000;
             }
           } catch (apiErr) {
             isServerAvailable = false;
-            apiRetryAfter = Date.now() + 60000;
+            apiRetryAfter = Date.now() + 120000;
           }
         } else {
           isServerAvailable = false;
@@ -97,10 +110,14 @@ const DataLayer = (() => {
           const cloudConfig = getCloudSyncConfig();
           if (cloudConfig && cloudConfig.syncUrl) {
             try {
-              const cloudRes = await fetch(cloudConfig.syncUrl + (cloudConfig.syncUrl.includes('?') ? '&' : '?') + `_t=${Date.now()}`, {
-                cache: 'no-store',
-                headers: cloudConfig.apiKey ? { 'X-Master-Key': cloudConfig.apiKey } : {}
-              });
+              const cloudRes = await fetchWithTimeout(
+                cloudConfig.syncUrl + (cloudConfig.syncUrl.includes('?') ? '&' : '?') + `_t=${Date.now()}`,
+                {
+                  cache: 'no-store',
+                  headers: cloudConfig.apiKey ? { 'X-Master-Key': cloudConfig.apiKey } : {}
+                },
+                4000
+              );
               if (cloudRes.ok) {
                 const cloudJson = await cloudRes.json();
                 fetchedData = cloudJson.record || cloudJson;
@@ -111,22 +128,30 @@ const DataLayer = (() => {
           }
         }
 
-        // 3. جلب ملف البيانات من المستودع (GitHub Pages / Static Hosting) مع كسر الكاش لضمان وصول التعديلات للجميع
+        // 3. جلب ملف البيانات من المستودع (GitHub Pages / Static Hosting) - سريع جداً (9.2 KB)
         if (!fetchedData) {
-          try {
-            const fileRes = await fetchWithTimeout(`./data/exams.json${cacheBuster}`, {
-              cache: 'no-store',
-              headers: { 'Accept': 'application/json' }
-            }, 10000);
-            if (fileRes.ok) {
-              fetchedData = await fileRes.json();
+          const basePath = window.location.pathname.replace(/\/[^/]*$/, '/');
+          const candidatePaths = [
+            `./data/exams.json${cacheBuster}`,
+            `data/exams.json${cacheBuster}`,
+            `${basePath}data/exams.json${cacheBuster}`
+          ];
+          for (const cPath of candidatePaths) {
+            try {
+              const fileRes = await fetchWithTimeout(cPath, {
+                headers: { 'Accept': 'application/json' }
+              }, 3500);
+              if (fileRes.ok) {
+                fetchedData = await fileRes.json();
+                break;
+              }
+            } catch (fileErr) {
+              // تجربة المسار التالي
             }
-          } catch (fileErr) {
-            console.warn('تعذر جلب ملف exams.json من المستودع:', fileErr);
           }
         }
 
-        // 4. إذا كنا في متصفح الأدمن نفسه مع عدم توفر سيرفر، نفحص التخزين المحلي
+        // 4. إذا كنا في متصفح الأدمن نفسه مع عدم توفر سيرفر، نفحص التخزين المحلي النظيف
         const localCustom = localStorage.getItem(STORAGE_KEY);
         const lastSnapshot = localStorage.getItem(LAST_SNAPSHOT_KEY);
 
@@ -134,7 +159,8 @@ const DataLayer = (() => {
           try {
             const parsed = JSON.parse(localCustom);
             validateData(parsed);
-            if (!fetchedData || (parsed.lastUpdatedTimestamp && parsed.lastUpdatedTimestamp > (fetchedData.lastUpdatedTimestamp || 0))) {
+            const isPayloadClean = JSON.stringify(parsed).length < 200000;
+            if (isPayloadClean && (!fetchedData || (parsed.lastUpdatedTimestamp && parsed.lastUpdatedTimestamp > (fetchedData.lastUpdatedTimestamp || 0)))) {
               fetchedData = parsed;
             }
           } catch (e) {}
@@ -149,7 +175,20 @@ const DataLayer = (() => {
         }
 
         if (!fetchedData) {
-          throw new Error('تعذر جلب ملف البيانات من الخادم أو المستودع.');
+          // بديل أمان فوري لضمان عدم توقف المنصة نهائياً
+          fetchedData = {
+            platformName: "منصة الامتحان المشترك",
+            department: "قسم تقنيات البصريات",
+            faculty: "كلية التقنيات الصحية والطبية",
+            academicYear: "2026 - 2027",
+            lastUpdated: "١١ أكتوبر ٢٠٢٦",
+            description: "المنصة الرسمية المعتمدة لطلبة قسم تقنيات البصريات للوصول المباشر إلى جميع محاضرات وملفات الامتحان التقويمي المشترك.",
+            stages: [
+              { id: "stage-2", number: 2, name: "المرحلة الثانية", subtitle: "الأساسيات البصرية والتشريح العيني", description: "مواد الامتحان المشترك للمرحلة الثانية", badge: "السنة الثانية", icon: "eye", accentColor: "#7c3aed", subjects: [] },
+              { id: "stage-3", number: 3, name: "المرحلة الثالثة", subtitle: "العدسات اللاصقة وفحص البصر السريري", description: "مواد الامتحان المشترك للمرحلة الثالثة", badge: "السنة الثالثة", icon: "glasses", accentColor: "#8b5cf6", subjects: [] },
+              { id: "stage-4", number: 4, name: "المرحلة الرابعة", subtitle: "أمراض العين المتقدمة وتأهيل البصر", description: "مواد الامتحان المشترك للمرحلة الرابعة", badge: "السنة الرابعة", icon: "award", accentColor: "#a855f7", subjects: [] }
+            ]
+          };
         }
 
         validateData(fetchedData);

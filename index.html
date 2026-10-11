@@ -25,13 +25,18 @@
     <link rel="apple-touch-icon" href="./assets/images/logo.svg" />
     <meta name="mobile-web-app-capable" content="yes" />
 
+    <!-- Performance Hints & Preconnect -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="dns-prefetch" href="https://unpkg.com" />
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js" as="script" />
+
     <!-- Stylesheets -->
     <link rel="stylesheet" href="./assets/css/style.css" />
 
     <!-- External Libraries via CDN -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.475.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   </head>
   <body>
 
@@ -40,9 +45,19 @@
       <div class="spinner"></div>
       <p style="font-size: 0.95rem; font-weight: 600; color: var(--accent);">جاري تهيئة منصة الامتحان المشترك...</p>
     </div>
+    <script>
+      // صمام أمان لضمان عدم بقاء شاشة التحميل معلقة نهائياً تحت أي ظرف
+      setTimeout(function () {
+        var loader = document.getElementById('global-loading-screen');
+        if (loader && loader.style.display !== 'none') {
+          console.warn('Watchdog: تم إنهاء شاشة التحميل المعلقة تلقائياً.');
+          loader.style.display = 'none';
+        }
+      }, 3500);
+    </script>
 
     <!-- Global Error Screen (Fallback) -->
-    <div id="global-error-screen" style="position: fixed; inset: 0; z-index: 99; background: var(--bg-app); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; padding: 2rem; text-align: center;">
+    <div id="global-error-screen" style="position: fixed; inset: 0; z-index: 105; background: var(--bg-app); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; padding: 2rem; text-align: center;">
       <div style="font-size: 3rem;">⚠️</div>
       <h2 style="font-size: 1.35rem; font-weight: 700;">تعذر تحميل بيانات المنصة</h2>
       <p class="error-detail" style="font-size: 0.9rem; color: var(--text-muted); max-width: 480px;">يرجى التأكد من تشغيل الموقع عبر خادم ويب محلي أو التأكد من سلامة اتصال الإنترنت.</p>
@@ -93,17 +108,6 @@
       </div>
     </header>
 
-    <aside id="install-app-prompt" class="install-app-prompt" hidden aria-label="تثبيت تطبيق المنصة">
-      <img src="./assets/images/logo.svg" alt="" class="install-app-icon" />
-      <div class="install-app-copy">
-        <strong>ثبّت المنصة كتطبيق</strong>
-        <span>وصول أسرع من شاشة تطبيقات هاتفك</span>
-      </div>
-      <button id="install-app-button" type="button" class="btn-primary install-app-button">
-        <i data-lucide="download" style="width: 16px; height: 16px;"></i>
-        <span>تثبيت</span>
-      </button>
-    </aside>
 
     <!-- Main Content Application Views -->
     <main class="app-container" style="flex-grow: 1;">
@@ -369,16 +373,84 @@
             تم تطوير هذه المنصة لتكون المرجع الرسمي والأول لطلبة قسم تقنيات البصريات للوصول الفوري والمنظم إلى جميع ملفات الامتحان التقويمي الوزاري المشترك. تم تصميم الواجهة بمعايير تطبيقات Apple الراقية بالثيم البنفسجي، لتعمل بكفاءة مطلقة على أجهزة iPhone، iPad، Mac، وشاشات الكمبيوتر.
           </p>
 
-          <div class="about-install-card">
+          <!-- Install App Section (Exclusive to About View) -->
+          <div class="about-install-card" id="about-install-section">
             <img src="./assets/images/logo.svg" alt="أيقونة منصة الامتحان المشترك" />
             <div class="about-install-copy">
-              <strong>ثبّت المنصة على هاتفك</strong>
-              <span>أضفها إلى الشاشة الرئيسية وافتحها كتطبيق باستخدام شعار المنصة.</span>
+              <strong>تثبيت المنصة كتطبيق على هاتفك وحاسوبك</strong>
+              <span>يمكنك إضافة المنصة إلى الشاشة الرئيسية لفتحها وتصفحها بسرعة وسهولة مثل أي تطبيق.</span>
             </div>
-            <button id="about-install-app-button" type="button" class="btn-primary install-app-button">
+            <button id="about-install-toggle-btn" type="button" class="btn-primary install-app-button" aria-expanded="false" aria-controls="about-install-guide">
               <i data-lucide="download" style="width: 16px; height: 16px;"></i>
-              <span>تثبيت التطبيق</span>
+              <span id="about-install-btn-text">طريقة تثبيت التطبيق</span>
             </button>
+          </div>
+
+          <!-- Collapsible Install Guide (Hidden by default, toggles on click, auto-hides on route change) -->
+          <div id="about-install-guide" class="about-install-guide-panel" style="display: none;">
+            <div class="guide-cards-grid">
+              <!-- iOS / Safari Card -->
+              <div class="guide-card">
+                <div class="guide-card-header">
+                  <div class="guide-card-icon">
+                    <i data-lucide="smartphone" style="width: 20px; height: 20px;"></i>
+                  </div>
+                  <div>
+                    <h4>أجهزة iPhone و iPad</h4>
+                    <span class="guide-badge">متصفح Safari</span>
+                  </div>
+                </div>
+                <ol class="guide-steps-list">
+                  <li>افتح المنصة عبر متصفح <strong>Safari</strong> الرسمي.</li>
+                  <li>اضغط على زر المشاركة <strong>(Share <i data-lucide="share" style="width: 13px; height: 13px; display: inline-block; vertical-align: middle;"></i>)</strong> أسفل الشاشة.</li>
+                  <li>مرر للأسفل واختر <strong>«إضافة إلى الشاشة الرئيسية» (Add to Home Screen)</strong>.</li>
+                  <li>اضغط على <strong>«إضافة» (Add)</strong> بالأعلى لتظهر المنصة كتطبيق مستقل بشعارها!</li>
+                </ol>
+              </div>
+
+              <!-- Android / Chrome Card -->
+              <div class="guide-card">
+                <div class="guide-card-header">
+                  <div class="guide-card-icon">
+                    <i data-lucide="tablet" style="width: 20px; height: 20px;"></i>
+                  </div>
+                  <div>
+                    <h4>أجهزة Android و Galaxy</h4>
+                    <span class="guide-badge">متصفح Chrome</span>
+                  </div>
+                </div>
+                <ol class="guide-steps-list">
+                  <li>افتح المنصة عبر متصفح <strong>Google Chrome</strong>.</li>
+                  <li>اضغط على قائمة الخيارات <strong>(⋮)</strong> في الزاوية العلوية أو السفلية.</li>
+                  <li>اختر <strong>«تثبيت التطبيق» (Install app)</strong> أو <strong>«إضافة إلى الشاشة الرئيسية»</strong>.</li>
+                  <li>أكّد التثبيت لتظهر أيقونة المنصة فوراً في شاشة التطبيقات.</li>
+                </ol>
+                <div id="pwa-direct-install-wrap" style="margin-top: 0.75rem; display: none;">
+                  <button id="pwa-direct-install-btn" type="button" class="btn-secondary" style="width: 100%; font-size: 0.8rem; padding: 0.45rem;">
+                    <i data-lucide="download-cloud" style="width: 14px; height: 14px;"></i>
+                    <span>تثبيت تلقائي الآن (PWA)</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Desktop / PC Card -->
+              <div class="guide-card">
+                <div class="guide-card-header">
+                  <div class="guide-card-icon">
+                    <i data-lucide="monitor" style="width: 20px; height: 20px;"></i>
+                  </div>
+                  <div>
+                    <h4>أجهزة الكمبيوتر واللابتوب</h4>
+                    <span class="guide-badge">Windows / Mac</span>
+                  </div>
+                </div>
+                <ol class="guide-steps-list">
+                  <li>افتح الموقع عبر متصفح <strong>Chrome</strong> أو <strong>Edge</strong>.</li>
+                  <li>ستلاحظ ظهور أيقونة تثبيت صغيرة في أقصى شريط الرابط بالأعلى.</li>
+                  <li>اضغط على الأيقونة ثم اختر <strong>«تثبيت» (Install)</strong> لتفتح المنصة كنافذة مستقلة فائقة السرعة.</li>
+                </ol>
+              </div>
+            </div>
           </div>
 
           <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 1.5rem;">
@@ -1015,9 +1087,9 @@
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
     <!-- Application JavaScript Modules -->
-    <script src="./assets/js/data.js?v=20261011-3"></script>
-    <script src="./assets/js/search.js"></script>
-    <script src="./assets/js/pdf-viewer.js"></script>
-    <script src="./assets/js/app.js?v=20261011-4"></script>
+    <script src="./assets/js/data.js?v=20261011-8"></script>
+    <script src="./assets/js/search.js?v=20261011-8"></script>
+    <script src="./assets/js/pdf-viewer.js?v=20261011-8"></script>
+    <script src="./assets/js/app.js?v=20261011-8"></script>
   </body>
 </html>
