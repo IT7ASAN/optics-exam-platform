@@ -1,4 +1,4 @@
-const CACHE_NAME = 'optics-platform-v3';
+const CACHE_NAME = 'optics-platform-v4';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './assets/images/logo.svg'];
 
 self.addEventListener('install', event => {
@@ -35,8 +35,12 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  const networkRequest = request.destination === 'script'
+    ? new Request(request, { cache: 'no-store' })
+    : request;
+
   event.respondWith(
-    fetch(request)
+    fetch(networkRequest)
       .then(response => {
         if (response.ok) {
           const copy = response.clone();
