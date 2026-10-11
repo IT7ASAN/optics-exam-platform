@@ -166,7 +166,8 @@ const DataLayer = (() => {
   }
 
   function ensureDefaultUIFields(data) {
-    if (!data.heroCardHeading) data.heroCardHeading = 'قسم هندسة وتكنولوجيا البصريات';
+    normalizeDepartmentName(data);
+    if (!data.heroCardHeading) data.heroCardHeading = 'قسم تقنيات البصريات';
     if (!data.heroCardText) data.heroCardText = 'الملفات المعتمدة وزارياً للامتحان المشترك، مصنفة بدقة حسب المراحل الأكاديمية.';
     if (!Array.isArray(data.heroCardTags)) {
       data.heroCardTags = ['البصريات الهندسية', 'فحص الانكسار', 'العدسات اللاصقة', 'أمراض العين'];
@@ -174,17 +175,17 @@ const DataLayer = (() => {
     if (!data.heroKicker) data.heroKicker = 'الامتحان التقويمي الوزاري الموحد';
     if (!data.heroTitle) data.heroTitle = 'كل ملفات الامتحان المشترك، في مكان واحد.';
     if (!data.heroSubtitle) {
-      data.heroSubtitle = 'تصفح المحاضرات والمقررات الرسمية لقسم هندسة وتكنولوجيا البصريات، واقرأ ملفات PDF مباشرة وسلاسة عبر الهاتف والكمبيوتر دون الحاجة لتطبيقات إضافية.';
+      data.heroSubtitle = 'تصفح المحاضرات والمقررات الرسمية لقسم تقنيات البصريات، واقرأ ملفات PDF مباشرة وسلاسة عبر الهاتف والكمبيوتر دون الحاجة لتطبيقات إضافية.';
     }
     if (!data.infoBannerTitle) data.infoBannerTitle = 'ضوابط وتعليمات الامتحان المشترك';
     if (!data.infoBannerSubtitle) data.infoBannerSubtitle = 'نظام الامتحان التقويمي الصادر من وزارة التعليم العالي والبحث العلمي';
     if (!data.infoBannerText) {
-      data.infoBannerText = 'الامتحان المشترك لقسم هندسة وتكنولوجيا البصريات يشمل مادتين تخصصيتين في كل مرحلة دراسية (المرحلة الثانية، الثالثة، والرابعة). يتم تحديث المواد والملفات سنوياً عبر لوحة الإدارة وملف البيانات المركزي للمنصة، بما يضمن توافق المفردات الوزارية مع الكليات والأقسام المناظرة.';
+      data.infoBannerText = 'الامتحان المشترك لقسم تقنيات البصريات يشمل مادتين تخصصيتين في كل مرحلة دراسية (المرحلة الثانية، الثالثة، والرابعة). يتم تحديث المواد والملفات سنوياً عبر لوحة الإدارة وملف البيانات المركزي للمنصة، بما يضمن توافق المفردات الوزارية مع الكليات والأقسام المناظرة.';
     }
-    if (!data.aboutTitle) data.aboutTitle = 'منصة الامتحان المشترك – قسم هندسة وتكنولوجيا البصريات';
+    if (!data.aboutTitle) data.aboutTitle = 'منصة الامتحان المشترك – قسم تقنيات البصريات';
     if (!data.aboutSubtitle) data.aboutSubtitle = 'Optics Common Exam Platform · للعام الدراسي 2026 - 2027';
     if (!data.aboutBody) {
-      data.aboutBody = 'تم تطوير هذه المنصة لتكون المرجع الرسمي والأول لطلبة قسم هندسة وتكنولوجيا البصريات للوصول الفوري والمنظم إلى جميع ملفات الامتحان التقويمي الوزاري المشترك. تم تصميم الواجهة بمعايير تطبيقات Apple الراقية بالثيم البنفسجي، لتعمل بكفاءة مطلقة على أجهزة iPhone، iPad، Mac، وشاشات الكمبيوتر.';
+      data.aboutBody = 'تم تطوير هذه المنصة لتكون المرجع الرسمي والأول لطلبة قسم تقنيات البصريات للوصول الفوري والمنظم إلى جميع ملفات الامتحان التقويمي الوزاري المشترك. تم تصميم الواجهة بمعايير تطبيقات Apple الراقية بالثيم البنفسجي، لتعمل بكفاءة مطلقة على أجهزة iPhone، iPad، Mac، وشاشات الكمبيوتر.';
     }
     if (data.showPlatformFeatures === undefined) data.showPlatformFeatures = true;
     if (!Array.isArray(data.platformFeatures) || data.platformFeatures.length === 0) {
@@ -197,6 +198,26 @@ const DataLayer = (() => {
         { title: 'تصدير JSON متوافق مع GitHub Pages', description: 'إمكانية تصدير التعديلات كملف exams.json بضغطة زر واحدة لرفعها وتحديث مستودع GitHub فوراً.', icon: 'download-cloud', enabled: true }
       ];
     }
+  }
+
+  function normalizeDepartmentName(value) {
+    if (Array.isArray(value)) {
+      value.forEach(normalizeDepartmentName);
+      return;
+    }
+    if (!value || typeof value !== 'object') return;
+
+    Object.keys(value).forEach(key => {
+      const item = value[key];
+      if (typeof item === 'string') {
+        value[key] = item
+          .replace(/قسم\s+هندسة\s+وتكنولوجيا\s+البصريات/g, 'قسم تقنيات البصريات')
+          .replace(/هندسة\s+وتكنولوجيا\s+البصريات/g, 'تقنيات البصريات')
+          .replace(/قسم\s+البصريات/g, 'قسم تقنيات البصريات');
+      } else if (item && typeof item === 'object') {
+        normalizeDepartmentName(item);
+      }
+    });
   }
 
   function validateData(data) {
@@ -745,6 +766,9 @@ const DataLayer = (() => {
       return { success: false, message: 'يرجى إدخال اسم المستخدم ورمز المرور.' };
     }
     const cleanUser = username.trim().toLowerCase();
+    if (!/^[a-z][a-z0-9._-]*$/.test(cleanUser)) {
+      return { success: false, message: 'اسم المستخدم يجب أن يبدأ بحرف إنجليزي، ويسمح بالأحرف الإنجليزية والأرقام والنقطة والشرطة فقط.' };
+    }
     if (cleanUser === ADMIN_CREDENTIALS.username.toLowerCase()) {
       return { success: false, message: 'اسم المستخدم هذا محجوز مسبقاً.' };
     }
@@ -850,6 +874,9 @@ const DataLayer = (() => {
 
     if (username) {
       const cleanUser = username.trim().toLowerCase();
+      if (!/^[a-z][a-z0-9._-]*$/.test(cleanUser)) {
+        return { success: false, message: 'اسم المستخدم يجب أن يبدأ بحرف إنجليزي، ويسمح بالأحرف الإنجليزية والأرقام والنقطة والشرطة فقط.' };
+      }
       const dup = users.some(u => u.id !== userId && u.username.toLowerCase() === cleanUser);
       if (dup) return { success: false, message: 'اسم المستخدم مستخدم بالفعل بحساب آخر.' };
       user.username = cleanUser;

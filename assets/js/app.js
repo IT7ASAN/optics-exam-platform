@@ -1,6 +1,6 @@
 /**
  * Optics Common Exam Platform - Main Application Controller
- * منصة الامتحان المشترك – قسم هندسة وتكنولوجيا البصريات
+ * منصة الامتحان المشترك – قسم تقنيات البصريات
  * تدعم التمرير السلس، الثيم البنفسجي، وتسجيل دخول المشرف (it7asan) وحسابات الطلاب،
  * والتحكم الكامل في نصوص الهيرو وصفحة حول المنصة وبطاقة القسم، ورفع الملفات من الجهاز.
  */
@@ -514,15 +514,25 @@ const App = (() => {
     }
   }
 
-  function handleRegisterSubmit(e) {
+  async function handleRegisterSubmit(e) {
     e.preventDefault();
     const fullName = document.getElementById('reg-fullname').value;
-    const username = document.getElementById('reg-username').value;
+    const usernameInput = document.getElementById('reg-username');
+    const username = usernameInput.value.trim();
     const password = document.getElementById('reg-password').value;
     const stage = document.getElementById('reg-stage').value;
     const errorEl = document.getElementById('login-error-msg');
 
-    const res = window.DataLayer.registerUser({ username, password, fullName, stage });
+    if (!/^[A-Za-z][A-Za-z0-9._-]*$/.test(username)) {
+      if (errorEl) {
+        errorEl.textContent = 'اسم المستخدم يجب أن يبدأ بحرف إنجليزي، ويسمح بالأحرف الإنجليزية والأرقام والنقطة والشرطة فقط.';
+        errorEl.style.display = 'block';
+      }
+      usernameInput.focus();
+      return;
+    }
+
+    const res = await window.DataLayer.registerUser({ username, password, fullName, stage });
     if (res.success) {
       if (errorEl) errorEl.style.display = 'none';
       closeLoginModal();
@@ -602,7 +612,7 @@ const App = (() => {
     if (brandPlatformName) brandPlatformName.textContent = data.platformName || 'منصة الامتحان المشترك';
 
     const brandDeptName = document.getElementById('brand-dept-name');
-    if (brandDeptName) brandDeptName.textContent = data.department || 'قسم هندسة وتكنولوجيا البصريات';
+    if (brandDeptName) brandDeptName.textContent = data.department || 'قسم تقنيات البصريات';
 
     const yearBadge = document.getElementById('academic-year-badge');
     if (yearBadge) yearBadge.textContent = data.academicYear || '2026 - 2027';
@@ -617,9 +627,9 @@ const App = (() => {
     const subtitleEl = document.getElementById('hero-subtitle-text');
     if (subtitleEl) subtitleEl.textContent = data.heroSubtitle || '';
 
-    // بطاقة قسم هندسة وتكنولوجيا البصريات التوضيحية
+    // بطاقة قسم تقنيات البصريات التوضيحية
     const heroCardHeading = document.getElementById('hero-card-heading');
-    if (heroCardHeading) heroCardHeading.textContent = data.heroCardHeading || data.department || 'قسم هندسة وتكنولوجيا البصريات';
+    if (heroCardHeading) heroCardHeading.textContent = data.heroCardHeading || data.department || 'قسم تقنيات البصريات';
 
     const heroCardText = document.getElementById('hero-card-text');
     if (heroCardText) heroCardText.textContent = data.heroCardText || 'الملفات المعتمدة وزارياً للامتحان المشترك، مصنفة بدقة حسب المراحل الأكاديمية.';
@@ -641,7 +651,7 @@ const App = (() => {
 
     // صفحة حول المنصة
     const aboutTitle = document.getElementById('about-page-title');
-    if (aboutTitle) aboutTitle.textContent = data.aboutTitle || `منصة الامتحان المشترك – ${data.department || 'قسم هندسة وتكنولوجيا البصريات'}`;
+    if (aboutTitle) aboutTitle.textContent = data.aboutTitle || `منصة الامتحان المشترك – ${data.department || 'قسم تقنيات البصريات'}`;
 
     const aboutSubtitle = document.getElementById('about-page-subtitle');
     if (aboutSubtitle) aboutSubtitle.textContent = data.aboutSubtitle || 'Optics Common Exam Platform';
@@ -1687,6 +1697,24 @@ git push -u origin main
                 </button>
               </div>
             </div>
+            <div style="margin: 0 0.75rem 0.75rem; padding: 0.75rem; border-right: 2px solid var(--border-medium); display: flex; flex-direction: column; gap: 0.5rem;">
+              ${sub.files && sub.files.length > 0 ? sub.files.map(file => `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; padding: 0.65rem 0.8rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px;">
+                  <div style="min-width: 0; flex: 1;">
+                    <span style="display: inline-block; margin-left: 0.4rem; padding: 0.1rem 0.45rem; border-radius: 6px; background: var(--accent-light); color: var(--accent); font-size: 0.75rem; font-weight: 700;">رقم ${file.number}</span>
+                    <span style="font-size: 0.85rem; font-weight: 600; overflow-wrap: anywhere;">${file.title}</span>
+                  </div>
+                  <div style="display: flex; gap: 0.35rem; flex-shrink: 0;">
+                    <button class="btn-inline-admin" onclick="App.openEditFileModal('${stage.id}', '${sub.id}', '${file.id}')" title="تعديل اسم أو رقم الملف">
+                      <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i><span>تعديل</span>
+                    </button>
+                    <button class="btn-inline-admin-danger" onclick="App.deleteFileConfirm('${stage.id}', '${sub.id}', '${file.id}')" title="حذف الملف">
+                      <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i><span>حذف</span>
+                    </button>
+                  </div>
+                </div>
+              `).join('') : '<p style="font-size: 0.8rem; color: var(--text-muted);">لا توجد ملفات أو محاضرات لهذه المادة بعد.</p>'}
+            </div>
           `).join('') : '<p style="font-size: 0.85rem; color: var(--text-muted);">لا توجد مواد مضافة في هذه المرحلة حالياً.</p>'}
         </div>
       `;
@@ -1750,8 +1778,8 @@ git push -u origin main
         { id: 'm_user_password', label: 'رمز المرور (كلمة السر)', placeholder: '12345678' },
         { id: 'm_user_stage', label: 'المرحلة الدراسية', value: 'المرحلة الثانية' }
       ],
-      onSubmit: (vals) => {
-        const res = window.DataLayer.registerUser({
+      onSubmit: async (vals) => {
+        const res = await window.DataLayer.registerUser({
           username: vals.m_user_username,
           password: vals.m_user_password,
           fullName: vals.m_user_fullname,
@@ -1761,7 +1789,7 @@ git push -u origin main
           renderAdminUsersTable();
           showToast(`تم إنشاء حساب ${vals.m_user_fullname} بنجاح ✨`);
         } else {
-          alert(res.message);
+          showToast(res.message || 'تعذر إنشاء الحساب.', 4500);
         }
       }
     });
@@ -1780,8 +1808,8 @@ git push -u origin main
         { id: 'm_user_password', label: 'رمز المرور الجديد', value: user.password },
         { id: 'm_user_stage', label: 'المرحلة الدراسية', value: user.stage || 'المرحلة الثانية' }
       ],
-      onSubmit: (vals) => {
-        const res = window.DataLayer.updateUser(userId, {
+      onSubmit: async (vals) => {
+        const res = await window.DataLayer.updateUser(userId, {
           username: vals.m_user_username,
           password: vals.m_user_password,
           fullName: vals.m_user_fullname,
@@ -1791,7 +1819,7 @@ git push -u origin main
           renderAdminUsersTable();
           showToast('تم تعديل بيانات الحساب والرمز بنجاح 🔑');
         } else {
-          alert(res.message);
+          showToast(res.message || 'تعذر تحديث بيانات الحساب.', 4500);
         }
       }
     });
@@ -1897,6 +1925,7 @@ git push -u origin main
         showGlobalLoading(false);
         state.data = window.DataLayer.getData();
         updateGlobalBranding(state.data);
+        renderAdminStagesList();
         handleHashChange();
         showToast('تمت إضافة المحاضرة ونشرها لجميع المستخدمين بنجاح 📄');
       }
@@ -1968,10 +1997,23 @@ git push -u origin main
         showGlobalLoading(false);
         state.data = window.DataLayer.getData();
         updateGlobalBranding(state.data);
+        renderAdminStagesList();
         handleHashChange();
         showToast('تم تعديل المحاضرة ونشرها لجميع المستخدمين بنجاح ✏️');
       }
     });
+  }
+
+  async function deleteFileConfirm(stageId, subjectId, fileId) {
+    const file = window.DataLayer.getFileById(stageId, subjectId, fileId);
+    if (!file || !confirm(`هل أنت متأكد من حذف الملف «${file.title}»؟`)) return;
+
+    await window.DataLayer.deleteFile(stageId, subjectId, fileId);
+    state.data = window.DataLayer.getData();
+    updateGlobalBranding(state.data);
+    renderAdminStagesList();
+    if (state.currentView === 'subject') renderSubjectView(stageId, subjectId);
+    showToast('تم حذف الملف بنجاح 🗑️');
   }
 
   function openEditStageModal(stageId) {
@@ -2294,6 +2336,7 @@ git push -u origin main
     deleteSubjectConfirm,
     openAddFileModal,
     openEditFileModal,
+    deleteFileConfirm,
     openAddUserModal,
     openEditUserModal,
     deleteUserConfirm,

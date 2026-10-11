@@ -1,6 +1,6 @@
 /* ==========================================================================
    Optics Common Exam Platform - Apple iOS/macOS Design System
-   منصة الامتحان المشترك – قسم هندسة وتكنولوجيا البصريات
+  منصة الامتحان المشترك – قسم تقنيات البصريات
    الثيم البنفسجي الملكي (Royal Apple Violet) مع دعم التمرير السلس ولوحة تحكم المشرف
    ========================================================================== */
 
@@ -1216,6 +1216,22 @@ input[type="color"].admin-form-input {
   transform: translateY(0) scale(1);
 }
 
+.auth-modal-content {
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+#login-modal-backdrop {
+  overflow-y: auto;
+}
+
+#login-modal-backdrop .modal-box {
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+}
+
 .search-modal-header, .modal-header {
   display: flex;
   align-items: center;
@@ -1627,6 +1643,20 @@ input[type="color"].admin-form-input {
 }
 
 @media (max-width: 767px) {
+  #login-modal-backdrop {
+    align-items: center;
+    padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  #login-modal-backdrop .modal-box {
+    max-height: calc(100vh - 1.5rem);
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 1.5rem);
+  }
+
+  .auth-modal-content {
+    padding: 1rem !important;
+  }
+
   html, body {
     max-width: 100%;
     overflow-x: hidden;
