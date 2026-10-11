@@ -35,10 +35,10 @@
       "subjects": [
         {
           "id": "stage-2-subject-1",
-          "name": "البصريات الفيزيائية والهندسية",
-          "nameEn": "Physical & Geometrical Optics",
+          "name": "اجهزة بصرية",
+          "nameEn": "",
           "code": "OPT-201",
-          "description": "دراسة قوانين الضوء، الانكسار، الانعكاس، خصائص العدسات الكروية والأسطوانية، والزيغ البصري وتطبيقاته المخبرية.",
+          "description": "",
           "instructor": "أستاذ المادة المشترك",
           "color": "#8b5cf6",
           "icon": "sparkles",
@@ -87,10 +87,10 @@
         },
         {
           "id": "stage-2-subject-2",
-          "name": "تشريح وفسيولوجيا العين",
-          "nameEn": "Ocular Anatomy & Physiology",
+          "name": "اخطاء الانكسار",
+          "nameEn": "",
           "code": "OPT-202",
-          "description": "التشريح الدقيق لطبقات مقلة العين، القرنية، القزحية، المشيمية، الشبكية، والخلط المائي والزجاجي.",
+          "description": "",
           "instructor": "أستاذ المادة المشترك",
           "color": "#06b6d4",
           "icon": "activity",
@@ -141,12 +141,12 @@
       "subjects": [
         {
           "id": "stage-3-subject-1",
-          "name": "فحص البصر السريري وتحديد الانكسار",
-          "nameEn": "Clinical Visual Optics & Refraction",
+          "name": "اخطاء الانكسار",
+          "nameEn": "",
           "code": "OPT-301",
-          "description": "التقنيات السريرية لقياس حدة البصر، التنظير الشبكي (Retinoscopy)، فحص الانكسار الذاتي، وتصحيح اللابؤرية.",
+          "description": "",
           "instructor": "أستاذ المادة المشترك",
-          "color": "#7c3aed",
+          "color": "#b89ee5",
           "icon": "glasses",
           "files": [
             {
@@ -183,10 +183,10 @@
         },
         {
           "id": "stage-3-subject-2",
-          "name": "العدسات اللاصقة والأجهزة البصرية",
-          "nameEn": "Contact Lenses & Instrumentation",
+          "name": "حول العين",
+          "nameEn": "",
           "code": "OPT-302",
-          "description": "تصميم وتصنيع العدسات اللاصقة اللينة والصلبة الغازية RGP، قياس انحناء القرنية، وطرق العناية والتعقيم.",
+          "description": "",
           "instructor": "أستاذ المادة المشترك",
           "color": "#6366f1",
           "icon": "disc",
@@ -237,12 +237,12 @@
       "subjects": [
         {
           "id": "stage-4-subject-1",
-          "name": "أمراض وجراحة العين المتقدمة",
-          "nameEn": "Advanced Ocular Disease & Surgery",
+          "name": "حول العين",
+          "nameEn": "",
           "code": "OPT-401",
-          "description": "التشخيص التفريقي لأمراض الجزء الأمامي والخلفي للعين، الجلوكوما، اعتلال الشبكية، والتدخلات الجراحية البصرية.",
+          "description": "",
           "instructor": "أستاذ المادة المشترك",
-          "color": "#6d28d9",
+          "color": "#a026d9",
           "icon": "crosshair",
           "files": [
             {
@@ -279,10 +279,10 @@
         },
         {
           "id": "stage-4-subject-2",
-          "name": "البصريات التخصصية وضعف البصر الشديد",
-          "nameEn": "Low Vision & Binocular Vision",
+          "name": "طب وعيون الاطفال",
+          "nameEn": "",
           "code": "OPT-402",
-          "description": "معينات ضعف الرؤية البصرية والإلكترونية، تقييم الحول، شلل عضلات العين، وتمارين تقويم البصر Orthoptics.",
+          "description": "",
           "instructor": "أستاذ المادة المشترك",
           "color": "#3730a3",
           "icon": "maximize",
@@ -318,9 +318,59 @@
               "date": "2026-10-09"
             }
           ]
+        },
+        {
+          "id": "stage-4-subject-1791718867231",
+          "name": "بدائل عينية",
+          "nameEn": "",
+          "code": "OPT-303",
+          "description": "",
+          "instructor": "أستاذ المادة المشترك",
+          "color": "#870865",
+          "icon": "book-open",
+          "files": []
         }
       ]
     }
   ],
-  "lastUpdatedTimestamp": 1791717428187
+  "lastUpdatedTimestamp": 1791718891152,
+  "showPlatformFeatures": true,
+  "platformFeatures": [
+    {
+      "title": "قارئ PDF داخلي مدمج",
+      "description": "تصفح وقراءة المحاضرات مباشرة داخل المنصة دون الحاجة لمغادرة الموقع أو تحميل تطبيقات إضافية.",
+      "icon": "eye",
+      "enabled": true
+    },
+    {
+      "title": "محرك بحث ذكي وسريع",
+      "description": "بحث فوري بالعربية مع معالجة حركات التشكيل واختصارات لوحة المفاتيح (Cmd+K) للوصول المباشر لأي ملف.",
+      "icon": "search",
+      "enabled": true
+    },
+    {
+      "title": "تحكم إداري كامل وشامل",
+      "description": "صلاحيات متكاملة للمشرف لتعديل نصوص الصفحة الرئيسية، البطاقات، والمواد ورفع الملفات من الجهاز.",
+      "icon": "shield-check",
+      "enabled": true
+    },
+    {
+      "title": "نظام حسابات الطلاب",
+      "description": "تسجيل حسابات شخصية للطلبة مع إمكانية تحكم المشرف في اليوزر نيم ورموز المرور وإدارتها بكل سهولة.",
+      "icon": "users",
+      "enabled": true
+    },
+    {
+      "title": "تصميم مخصص للهواتف والتمرير السلس",
+      "description": "شريط سفلي iOS وتمرير سلس فائق النعومة بين أقسام الصفحة مع توافق تام مع شاشات iPhone الحديثة.",
+      "icon": "smartphone",
+      "enabled": true
+    },
+    {
+      "title": "تصدير JSON متوافق مع GitHub Pages",
+      "description": "إمكانية تصدير التعديلات كملف exams.json بضغطة زر واحدة لرفعها وتحديث مستودع GitHub فوراً.",
+      "icon": "download-cloud",
+      "enabled": true
+    }
+  ]
 }
