@@ -439,7 +439,6 @@ const App = (() => {
           <span>حسابي</span>
         `;
       }
-      updateInstallButton();
       adminNavLinks.forEach(el => el.style.display = 'none');
     } else {
       if (authBtn) {
@@ -455,10 +454,8 @@ const App = (() => {
           <span>دخول</span>
         `;
       }
-      updateInstallButton();
       adminNavLinks.forEach(el => el.style.display = 'none');
     }
-    updateInstallButton();
     refreshIcons();
   }
 
@@ -546,7 +543,6 @@ const App = (() => {
       localStorage.setItem('optics_account_created', 'true');
       closeLoginModal();
       updateAdminUI();
-      updateInstallButton();
       showToast(`تم إنشاء الحساب بنجاح! مرحباً بك يا ${res.user.fullName} 🎉`);
     } else {
       if (errorEl) {
@@ -569,6 +565,10 @@ const App = (() => {
 
   function isAppInstalled() {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+
+  function updateInstallButton() {
+    // تم حصر الشرح والتثبيت في صفحة «حول المنصة» حصرياً
   }
 
   const GITHUB_SW_CLEANUP_KEY = 'optics_github_sw_cleanup_v1';
@@ -1916,7 +1916,6 @@ git push -u origin main
         }, false);
         if (res.success) {
           localStorage.setItem('optics_account_created', 'true');
-          updateInstallButton();
           await renderAdminUsersTable(false);
           showToast(`تم إنشاء حساب ${vals.m_user_fullname} بنجاح ✨`);
         } else {
