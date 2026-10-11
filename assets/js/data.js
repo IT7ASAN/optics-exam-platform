@@ -10,11 +10,20 @@ const DataLayer = (() => {
   const USERS_KEY = 'optics_registered_users';
   const GITHUB_CONFIG_KEY = 'optics_github_sync_config';
   const CLOUD_SYNC_KEY = 'optics_cloud_sync_config';
-  const DEPLOYED_API_BASE = 'https://optics-exam-platform.onrender.com';
+  // Set this to the live Node.js API origin after the backend has actually been deployed.
+  // GitHub Pages is static; the previous Render hostname currently returns no-server/404.
+  const DEPLOYED_API_BASE = '';
+
+  function isGitHubPages() {
+    return window.location.hostname.endsWith('.github.io');
+  }
+
+  function isBackendConfigured() {
+    return !isGitHubPages() || Boolean(DEPLOYED_API_BASE);
+  }
 
   function apiUrl(path) {
-    const isGitHubPages = window.location.hostname.endsWith('.github.io');
-    const base = isGitHubPages ? DEPLOYED_API_BASE : '';
+    const base = isGitHubPages() ? DEPLOYED_API_BASE : '';
     return `${base}${path}`;
   }
 
@@ -55,7 +64,7 @@ const DataLayer = (() => {
         const cacheBuster = `?t=${Date.now()}`;
 
         // 1. محاولة جلب أحدث البيانات الحية من الخادم المشترك (Server API) إذا كان متاحاً
-        if (Date.now() >= apiRetryAfter) {
+        if (isBackendConfigured() && Date.now() >= apiRetryAfter) {
           try {
             const apiRes = await fetch(apiUrl(`/api/exams${cacheBuster}`), {
               cache: 'no-store',
@@ -247,6 +256,7 @@ const DataLayer = (() => {
 
     // 2. إرسال التحديث إلى الخادم المشترك إن وجد (Node.js API) ليظهر فوراً للجميع
     try {
+      if (!isBackendConfigured()) throw new Error('Backend is not configured on GitHub Pages');
       const res = await fetch(apiUrl('/api/exams'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -290,6 +300,7 @@ const DataLayer = (() => {
    * فحص حالة الخادم المباشر لمعرفة إن كان الموقع يعمل بـ Fullstack أم GitHub Pages Static
    */
   async function checkServerStatus() {
+    if (!isBackendConfigured()) return { isOnline: false, hasServer: false };
     if (Date.now() < apiRetryAfter) return { isOnline: false, hasServer: false };
     try {
       const res = await fetch(apiUrl(`/api/status?_t=${Date.now()}`), { cache: 'no-store' });
@@ -361,6 +372,9 @@ const DataLayer = (() => {
     if (!cleanRepo.includes('/')) {
       throw new Error('اسم المستودع يجب أن يكون بصيغة: اسم-المستخدم/اسم-المستودع (مثال: ahmed/optics-platform)');
     }
+    if (!isBackendConfigured()) {
+      throw new Error('نشر GitHub المباشر من لوحة الإدارة يتطلب خادم Node.js. يمكنك تنزيل exams.json ورفعه يدوياً إلى GitHub.');
+    }
 
     // تحديث الطوابع الزمنية قبل إرسال البيانات إلى الخادم الوسيط.
     examData.lastUpdated = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -415,6 +429,9 @@ const DataLayer = (() => {
     if (!cleanRepo.includes('/')) {
       throw new Error('اسم المستودع يجب أن يكون بصيغة: اسم-المستخدم/اسم-المستودع (مثال: ahmed/optics-platform)');
     }
+    if (!isBackendConfigured()) {
+      throw new Error('فحص GitHub من لوحة الإدارة يتطلب خادم Node.js.');
+    }
 
     try {
       const response = await fetch(apiUrl('/api/github/test'), {
@@ -458,6 +475,10 @@ const DataLayer = (() => {
    * رفع ملف PDF إلى الخادم المشترك ليصبح متاحاً للجميع برابط عام
    */
   async function uploadPdfToServer(filename, base64Data, stageId, subjectId) {
+    if (!isBackendConfigured()) {
+      console.warn('رفع PDF إلى الخادم غير متاح على GitHub Pages؛ سيتم حفظ الملف محلياً فقط.');
+      return base64Data;
+    }
     try {
       const res = await fetch(apiUrl('/api/upload-pdf'), {
         method: 'POST',
@@ -645,6 +666,11 @@ const DataLayer = (() => {
    * إدارة حسابات المستخدمين والطلاب (مزامنة مع الخادم)
    */
   async function fetchServerUsers() {
+    if (!isBackendConfigured()) {
+      usersServerAvailable = false;
+      usersApiError = 'GitHub Pages لا يحفظ الحسابات. يلزم نشر خادم Node.js لمزامنتها بين الأجهزة.';
+      return null;
+    }
     try {
       const res = await fetch(apiUrl('/api/users'), { cache: 'no-store', headers: getAdminHeaders() });
       if (res.ok) {
@@ -713,6 +739,9 @@ const DataLayer = (() => {
     if (cleanUser === ADMIN_CREDENTIALS.username.toLowerCase()) {
       return { success: false, message: 'اسم المستخدم هذا محجوز مسبقاً.' };
     }
+    if (!isBackendConfigured()) {
+      return { success: false, message: 'إنشاء الحسابات المشتركة غير متاح حالياً: GitHub Pages لا يحفظ حسابات المستخدمين. يلزم نشر خادم Node.js.' };
+    }
 
     let response;
     try {
@@ -750,6 +779,10 @@ const DataLayer = (() => {
   async function login(username, password) {
     const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
+
+    if (!isBackendConfigured()) {
+      return { success: false, message: 'تسجيل دخول حسابات الطلاب والمشرف يتطلب خادم Node.js؛ الموقع يعمل حالياً بوضع GitHub Pages الثابت.' };
+    }
 
     if (cleanUser === ADMIN_CREDENTIALS.username) {
       let adminResponse;
@@ -836,6 +869,7 @@ const DataLayer = (() => {
   }
 
   async function updateUser(userId, { username, password, fullName, stage }) {
+    if (!isBackendConfigured()) return { success: false, message: 'تعديل الحسابات يتطلب خادم Node.js.' };
     const users = await getRegisteredUsers(false);
     const user = users.find(u => u.id === userId);
     if (!user) return false;
@@ -866,6 +900,7 @@ const DataLayer = (() => {
   }
 
   async function deleteUser(userId) {
+    if (!isBackendConfigured()) return false;
     const users = await getRegisteredUsers(false);
     const idx = users.findIndex(u => u.id === userId);
     if (idx === -1) return false;
