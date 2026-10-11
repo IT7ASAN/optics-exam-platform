@@ -1,6 +1,6 @@
 {
   "name": "Optics Common Exam Platform",
-  "description": "منصة الامتحان المشترك لقسم هندسة وتكنولوجيا البصريات – تصفح وقراءة ملفات ومحاضرات الامتحان المشترك لجميع المراحل مع لوحة تحكم وثيم بنفسجي ملكي",
+  "description": "منصة الامتحان المشترك لقسم تقنيات البصريات – تصفح وقراءة ملفات ومحاضرات الامتحان المشترك لجميع المراحل مع لوحة تحكم وثيم بنفسجي ملكي",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
