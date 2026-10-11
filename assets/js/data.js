@@ -10,6 +10,13 @@ const DataLayer = (() => {
   const USERS_KEY = 'optics_registered_users';
   const GITHUB_CONFIG_KEY = 'optics_github_sync_config';
   const CLOUD_SYNC_KEY = 'optics_cloud_sync_config';
+  const DEPLOYED_API_BASE = 'https://optics-exam-platform.onrender.com';
+
+  function apiUrl(path) {
+    const isGitHubPages = window.location.hostname.endsWith('.github.io');
+    const base = isGitHubPages ? DEPLOYED_API_BASE : '';
+    return `${base}${path}`;
+  }
 
   // بيانات حساب المشرف الافتراضية
   const ADMIN_CREDENTIALS = {
@@ -48,7 +55,7 @@ const DataLayer = (() => {
 
         // 1. محاولة جلب أحدث البيانات الحية من الخادم المشترك (Server API) إذا كان متاحاً
         try {
-          const apiRes = await fetch(`/api/exams${cacheBuster}`, {
+          const apiRes = await fetch(apiUrl(`/api/exams${cacheBuster}`), {
             cache: 'no-store',
             headers: {
               'Accept': 'application/json',
@@ -238,7 +245,7 @@ const DataLayer = (() => {
 
     // 2. إرسال التحديث إلى الخادم المشترك إن وجد (Node.js API) ليظهر فوراً للجميع
     try {
-      const res = await fetch('/api/exams', {
+      const res = await fetch(apiUrl('/api/exams'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(examData)
@@ -282,7 +289,7 @@ const DataLayer = (() => {
    */
   async function checkServerStatus() {
     try {
-      const res = await fetch(`/api/status?_t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch(apiUrl(`/api/status?_t=${Date.now()}`), { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         isServerAvailable = !!data.hasServer;
@@ -519,7 +526,7 @@ const DataLayer = (() => {
    */
   async function uploadPdfToServer(filename, base64Data, stageId, subjectId) {
     try {
-      const res = await fetch('/api/upload-pdf', {
+      const res = await fetch(apiUrl('/api/upload-pdf'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename, base64Data, stageId, subjectId })
@@ -706,7 +713,7 @@ const DataLayer = (() => {
    */
   async function fetchServerUsers() {
     try {
-      const res = await fetch('/api/users', { cache: 'no-store', headers: getAdminHeaders() });
+      const res = await fetch(apiUrl('/api/users'), { cache: 'no-store', headers: getAdminHeaders() });
       if (res.ok) {
         const users = await res.json();
         if (Array.isArray(users)) {
@@ -776,7 +783,7 @@ const DataLayer = (() => {
 
     let response;
     try {
-      response = await fetch('/api/register', {
+      response = await fetch(apiUrl('/api/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: cleanUser, password, fullName, stage })
@@ -814,7 +821,7 @@ const DataLayer = (() => {
     if (cleanUser === ADMIN_CREDENTIALS.username) {
       let adminResponse;
       try {
-        adminResponse = await fetch('/api/admin/login', {
+        adminResponse = await fetch(apiUrl('/api/admin/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: cleanUser, password: cleanPass })
@@ -838,7 +845,7 @@ const DataLayer = (() => {
 
     let foundUser = null;
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch(apiUrl('/api/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: cleanUser, password: cleanPass })
@@ -910,7 +917,7 @@ const DataLayer = (() => {
       user.username = cleanUser;
     }
     try {
-      const response = await fetch(`/api/users/${encodeURIComponent(userId)}`, {
+      const response = await fetch(apiUrl(`/api/users/${encodeURIComponent(userId)}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...getAdminHeaders() },
         body: JSON.stringify({ username: username || user.username, password, fullName, stage })
@@ -930,7 +937,7 @@ const DataLayer = (() => {
     const idx = users.findIndex(u => u.id === userId);
     if (idx === -1) return false;
     try {
-      const response = await fetch(`/api/users/${encodeURIComponent(userId)}`, {
+      const response = await fetch(apiUrl(`/api/users/${encodeURIComponent(userId)}`), {
         method: 'DELETE',
         headers: getAdminHeaders()
       });

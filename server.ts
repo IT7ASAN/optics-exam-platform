@@ -10,6 +10,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.resolve(__dirname, 'data');
+const ALLOWED_ORIGINS = new Set([
+  'https://it7asan.github.io',
+  'https://optics-exam-platform.onrender.com',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+]);
 
 type StoredUser = {
   id: string;
@@ -25,6 +31,17 @@ type StoredUser = {
 };
 
 // دعم استقبال البيانات الكبيرة مثل ملفات PDF بترميز Base64
+app.use((req, res, next) => {
+  const origin = req.header('origin');
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Password');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -78,7 +95,7 @@ function validUsername(username: string): boolean {
 }
 
 function isAdminRequest(req: express.Request) {
-  const configuredPassword = process.env.ADMIN_PASSWORD || '20032003';
+  const configuredPassword = process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : '20032003');
   const suppliedPassword = req.header('x-admin-password') || '';
   return suppliedPassword.length > 0 && suppliedPassword === configuredPassword;
 }
@@ -225,7 +242,10 @@ app.post('/api/login', (req, res) => {
 
 app.post('/api/admin/login', (req, res) => {
   const expectedUsername = 'it7asan';
-  const expectedPassword = process.env.ADMIN_PASSWORD || '20032003';
+  const expectedPassword = process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : '20032003');
+  if (!expectedPassword) {
+    return res.status(503).json({ error: 'يجب ضبط ADMIN_PASSWORD كمتغير سري في إعدادات الخادم.' });
+  }
   const username = String(req.body?.username || '').trim().toLowerCase();
   const password = String(req.body?.password || '').trim();
   if (username !== expectedUsername || password !== expectedPassword) {

@@ -566,13 +566,15 @@ const App = (() => {
 
   function updateInstallButton() {
     const installPrompt = document.getElementById('install-app-prompt');
-    if (!installPrompt) return;
-    installPrompt.hidden = isAppInstalled() || !!window.DataLayer.getCurrentUser() || localStorage.getItem('optics_account_created') === 'true';
+    const aboutInstallCard = document.querySelector('.about-install-card');
+    const shouldHide = isAppInstalled() || !!window.DataLayer.getCurrentUser() || localStorage.getItem('optics_account_created') === 'true';
+    if (installPrompt) installPrompt.hidden = shouldHide;
+    if (aboutInstallCard) aboutInstallCard.hidden = shouldHide;
   }
 
   function setupInstallPrompt() {
-    const installButton = document.getElementById('install-app-button');
-    if (!installButton) return;
+    const installButtons = document.querySelectorAll('#install-app-button, #about-install-app-button');
+    if (!installButtons.length) return;
 
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -584,12 +586,12 @@ const App = (() => {
       updateInstallButton();
       showToast('تم تثبيت المنصة بنجاح على جهازك 📱');
     });
-    installButton.addEventListener('click', async () => {
+    const promptInstall = async () => {
       if (deferredInstallPrompt) {
         deferredInstallPrompt.prompt();
-        await deferredInstallPrompt.userChoice;
+        const choice = await deferredInstallPrompt.userChoice;
         deferredInstallPrompt = null;
-        updateInstallButton();
+        if (choice?.outcome === 'accepted') updateInstallButton();
         return;
       }
 
@@ -597,7 +599,8 @@ const App = (() => {
       showToast(isIos
         ? 'لتثبيت المنصة على iPhone: اضغط «مشاركة» في Safari ثم «إضافة إلى الشاشة الرئيسية».'
         : 'من قائمة المتصفح اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».', 6500);
-    });
+      };
+      installButtons.forEach(button => button.addEventListener('click', promptInstall));
 
     updateInstallButton();
     if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
