@@ -2,7 +2,7 @@
   "platformName": "منصة الامتحان المشترك",
   "department": "قسم تقنيات البصريات",
   "faculty": "كلية التقنيات الصحية والطبية",
-  "academicYear": "2024 - 2027",
+  "academicYear": "2026 - 2027",
   "lastUpdated": "١١ أكتوبر ٢٠٢٦",
   "description": "المنصة الرسمية المعتمدة لطلبة قسم تقنيات البصريات للوصول المباشر إلى جميع محاضرات وملفات الامتحان التقويمي المشترك، مع قارئ PDF مدمج وبحث فوري وسريع.",
   "heroKicker": "الامتحان التقويمي الوزاري الموحد",
@@ -42,48 +42,7 @@
           "instructor": "أستاذ المادة المشترك",
           "color": "#8b5cf6",
           "icon": "sparkles",
-          "files": [
-            {
-              "id": "s2-sub1-001",
-              "number": 1,
-              "title": "المحاضرة 01: طبيعة الضوء وقوانين الانعكاس والانكسار",
-              "description": "مقدمة شاملة في انتشار الضوء، قانون سنيل، والانعكاس الداخلي الكلي مع مسائل تطبيقية.",
-              "path": "files/stage-2/subject-1/lecture-01.pdf",
-              "pages": 12,
-              "size": "2.4 MB",
-              "date": "2026-09-15"
-            },
-            {
-              "id": "s2-sub1-002",
-              "number": 2,
-              "title": "المحاضرة 02: العدسات الكروية الرقيقة وتكوين الصور",
-              "description": "معادلة صانعي العدسات، البؤر والمستويات البؤرية، التكبير الطولي والزاوي، ورسم مسارات الأشعة.",
-              "path": "files/stage-2/subject-1/lecture-02.pdf",
-              "pages": 16,
-              "size": "3.1 MB",
-              "date": "2026-09-22"
-            },
-            {
-              "id": "s2-sub1-003",
-              "number": 3,
-              "title": "المحاضرة 03: المنشور البصري وقوة المنشور الديلوبترية",
-              "description": "الانحراف في المناشير، قاعدة برنتيس، وحساب التأثير المنشوري للعدسات اللامركزية.",
-              "path": "files/stage-2/subject-1/lecture-03.pdf",
-              "pages": 14,
-              "size": "2.8 MB",
-              "date": "2026-10-01"
-            },
-            {
-              "id": "s2-sub1-004",
-              "number": 4,
-              "title": "المحاضرة 04: الزيغ البصري وتشتت الضوء اللوني",
-              "description": "الزيغ الكروي، الغيبوبة (Coma)، الاستجماتيزم المائل، وتقليل الزيغ في الأجهزة البصرية الحديثة.",
-              "path": "files/stage-2/subject-1/lecture-04.pdf",
-              "pages": 18,
-              "size": "3.5 MB",
-              "date": "2026-10-08"
-            }
-          ]
+          "files": []
         },
         {
           "id": "stage-2-subject-2",
@@ -94,38 +53,7 @@
           "instructor": "أستاذ المادة المشترك",
           "color": "#06b6d4",
           "icon": "activity",
-          "files": [
-            {
-              "id": "s2-sub2-001",
-              "number": 1,
-              "title": "المحاضرة 01: التشريح الدقيق للقرنية والصلبة",
-              "description": "طبقات القرنية الخمس، آليات الشفافية الحيوية، فسيولوجيا مضخة الإندوثيليوم، وتغذية الصلبة.",
-              "path": "files/stage-2/subject-1/lecture-01.pdf",
-              "pages": 15,
-              "size": "2.6 MB",
-              "date": "2026-09-18"
-            },
-            {
-              "id": "s2-sub2-002",
-              "number": 2,
-              "title": "المحاضرة 02: الجسم الهدبي والقزحية وتدفق الخلط المائي",
-              "description": "إفراز الخلط المائي، آلية التدفق عبر زاوية الحجرة الأمامية، وعلاقة ذلك بضغط العين الداخلي IOP.",
-              "path": "files/stage-2/subject-2/lecture-02.pdf",
-              "pages": 14,
-              "size": "2.9 MB",
-              "date": "2026-09-27"
-            },
-            {
-              "id": "s2-sub2-003",
-              "number": 3,
-              "title": "المحاضرة 03: شبكية العين والمسار العصبي البصري",
-              "description": "المستقبلات الضوئية (العصي والمخاريط)، اللطخة الصفراء، الحليمة البصرية، والتصالب البصري في الدماغ.",
-              "path": "files/stage-2/subject-2/lecture-03.pdf",
-              "pages": 20,
-              "size": "4.2 MB",
-              "date": "2026-10-05"
-            }
-          ]
+          "files": []
         }
       ]
     },
@@ -148,38 +76,7 @@
           "instructor": "أستاذ المادة المشترك",
           "color": "#b89ee5",
           "icon": "glasses",
-          "files": [
-            {
-              "id": "s3-sub1-001",
-              "number": 1,
-              "title": "المحاضرة 01: بروتوكول فحص حدة الإبصار وخرائط سنيلين",
-              "description": "حساب زاوية الرؤية الدقيقة، لوحات LogMAR وSnellen، وفحص الحساسية للتباين (Contrast Sensitivity).",
-              "path": "files/stage-3/subject-1/lecture-01.pdf",
-              "pages": 14,
-              "size": "2.7 MB",
-              "date": "2026-09-14"
-            },
-            {
-              "id": "s3-sub1-002",
-              "number": 2,
-              "title": "المحاضرة 02: تقنيات فحص الظل بالتنظير الشبكي (Retinoscopy)",
-              "description": "التنظير الساكن والديناميكي، تحديد المحاور الأسطوانية، وقاعدة تحييد حركة الظل (With/Against motion).",
-              "path": "files/stage-3/subject-1/lecture-02.pdf",
-              "pages": 18,
-              "size": "3.3 MB",
-              "date": "2026-09-24"
-            },
-            {
-              "id": "s3-sub1-003",
-              "number": 3,
-              "title": "المحاضرة 03: الفحص الذاتي وتوازن العينين الثنائي",
-              "description": "استخدام أسطوانة كروس (Jackson Cross Cylinder)، واختبار التعتيم، وتوازن التكيف البصري.",
-              "path": "files/stage-3/subject-1/lecture-03.pdf",
-              "pages": 16,
-              "size": "3.0 MB",
-              "date": "2026-10-04"
-            }
-          ]
+          "files": []
         },
         {
           "id": "stage-3-subject-2",
@@ -190,38 +87,7 @@
           "instructor": "أستاذ المادة المشترك",
           "color": "#6366f1",
           "icon": "disc",
-          "files": [
-            {
-              "id": "s3-sub2-001",
-              "number": 1,
-              "title": "المحاضرة 01: مواد وبوليمرات العدسات اللاصقة ونفاذية الأكسجين",
-              "description": "مفهوم Dk/t، هيدروجيل وسيليكون هيدروجيل، ومعامل المرونة والتبلل السطحي للعدسة.",
-              "path": "files/stage-3/subject-2/lecture-01.pdf",
-              "pages": 16,
-              "size": "2.9 MB",
-              "date": "2026-09-17"
-            },
-            {
-              "id": "s3-sub2-002",
-              "number": 2,
-              "title": "المحاضرة 02: تقييم ملاءمة العدسات بواسطة المصباح الشقي (Slit Lamp)",
-              "description": "استخدام صبغة الفلوريسين، فحص حركة العدسة وتمركزها، ومخططات توزيع فيلم الدموع.",
-              "path": "files/stage-3/subject-2/lecture-02.pdf",
-              "pages": 22,
-              "size": "4.1 MB",
-              "date": "2026-09-28"
-            },
-            {
-              "id": "s3-sub2-003",
-              "number": 3,
-              "title": "المحاضرة 03: مضاعفات ارتداء العدسات وإدارتها السريرية",
-              "description": "نقص الأكسجين الحاد والمزمن، التهاب القرنية الجرثومي، تفاعلات الحساسية، وبروتوكولات التطهير.",
-              "path": "files/stage-3/subject-2/lecture-03.pdf",
-              "pages": 19,
-              "size": "3.6 MB",
-              "date": "2026-10-07"
-            }
-          ]
+          "files": []
         }
       ]
     },
@@ -244,38 +110,7 @@
           "instructor": "أستاذ المادة المشترك",
           "color": "#a026d9",
           "icon": "crosshair",
-          "files": [
-            {
-              "id": "s4-sub1-001",
-              "number": 1,
-              "title": "المحاضرة 01: الزرق (الجلوكوما): التصنيف والتشخيص وقياس المجال البصري",
-              "description": "أنواع الزرق مفتوح ومغلق الزاوية، قراءة خرائط Humphrey Visual Field، وتحليل طبقة الألياف العصبية OCT.",
-              "path": "files/stage-4/subject-1/lecture-01.pdf",
-              "pages": 24,
-              "size": "4.5 MB",
-              "date": "2026-09-16"
-            },
-            {
-              "id": "s4-sub1-002",
-              "number": 2,
-              "title": "المحاضرة 02: اعتلال الشبكية السكري والانسدادات الوعائية",
-              "description": "المراحل غير التكاثرية والتكاثرية (NPDR / PDR)، الوذمة البقعية DME، وعلاجات الحقن داخل الزجاجي والليزر.",
-              "path": "files/stage-4/subject-1/lecture-02.pdf",
-              "pages": 20,
-              "size": "3.8 MB",
-              "date": "2026-09-25"
-            },
-            {
-              "id": "s4-sub1-003",
-              "number": 3,
-              "title": "المحاضرة 03: إعتام عدسة العين (الماء الأبيض) وزراعة العدسات IOL",
-              "description": "تقنيات الفاكو (Phacoemulsification)، حساب قوة العدسة المزروعة، والعدسات متعددة البؤر والطوريك.",
-              "path": "files/stage-4/subject-1/lecture-03.pdf",
-              "pages": 17,
-              "size": "3.2 MB",
-              "date": "2026-10-06"
-            }
-          ]
+          "files": []
         },
         {
           "id": "stage-4-subject-2",
@@ -286,38 +121,7 @@
           "instructor": "أستاذ المادة المشترك",
           "color": "#3730a3",
           "icon": "maximize",
-          "files": [
-            {
-              "id": "s4-sub2-001",
-              "number": 1,
-              "title": "المحاضرة 01: مبادئ التكبير ومعينات ضعف البصر (Low Vision Aids)",
-              "description": "حساب التكبير النسبي بالحجم والمسافة، المكبرات البصرية المحمولة، التلسكوبات الجاليلية والكبلرية.",
-              "path": "files/stage-4/subject-2/lecture-01.pdf",
-              "pages": 18,
-              "size": "3.1 MB",
-              "date": "2026-09-19"
-            },
-            {
-              "id": "s4-sub2-002",
-              "number": 2,
-              "title": "المحاضرة 02: تشخيص وعلاج اضطرابات الرؤية الثنائية والحول",
-              "description": "اختبارات التغطية (Cover Tests)، قياس زاوية الحول بالمنشور، درجات دمج الصور والتجسيم (Stereopsis).",
-              "path": "files/stage-4/subject-2/lecture-02.pdf",
-              "pages": 21,
-              "size": "3.9 MB",
-              "date": "2026-09-30"
-            },
-            {
-              "id": "s4-sub2-003",
-              "number": 3,
-              "title": "المحاضرة 03: قصور التقارب والتكيف البصري وتمارين تقويم البصر",
-              "description": "تشخيص Convergence Insufficiency، نقطة التقارب القريبة NPC، وبرامج التمارين المنزلية والعيادية.",
-              "path": "files/stage-4/subject-2/lecture-03.pdf",
-              "pages": 15,
-              "size": "2.8 MB",
-              "date": "2026-10-09"
-            }
-          ]
+          "files": []
         },
         {
           "id": "stage-4-subject-1791718867231",
@@ -333,7 +137,7 @@
       ]
     }
   ],
-  "lastUpdatedTimestamp": 1791719082688,
+  "lastUpdatedTimestamp": 1791721076919,
   "showPlatformFeatures": false,
   "platformFeatures": [
     {
