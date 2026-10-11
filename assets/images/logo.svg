@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Gradient Definitions (Royal Apple Purple Theme) -->
+  <defs>
+    <linearGradient id="lensGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9333ea" />
+      <stop offset="50%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#581c87" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c084fc" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1035" />
+      <stop offset="100%" stop-color="#0e071c" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Pill Rounded Container -->
+  <rect width="100" height="100" rx="26" fill="url(#bgGrad)" />
+  <rect width="98" height="98" x="1" y="1" rx="25" stroke="rgba(192, 132, 252, 0.25)" stroke-width="1.5" />
+  
+  <!-- Subtle Internal Grid / Lens Reticle -->
+  <circle cx="50" cy="50" r="36" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1.5" stroke-dasharray="3 3" />
+  <circle cx="50" cy="50" r="26" stroke="rgba(192, 132, 252, 0.2)" stroke-width="1.5" />
+
+  <!-- Stylized Eye Contour -->
+  <path d="M18 50C28 35 72 35 82 50C72 65 28 65 18 50Z" stroke="url(#accentGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Biconvex Lens Iris Center -->
+  <path d="M42 50C42 39 50 34 50 34C50 34 58 39 58 50C58 61 50 66 50 66C50 66 42 61 42 50Z" fill="url(#lensGrad)" />
+
+  <!-- Pupil and Light Focal Core -->
+  <circle cx="50" cy="50" r="6" fill="#ffffff" />
+  
+  <!-- Optical Light Rays Entering and Converging -->
+  <path d="M12 43L32 46L50 50L68 54L88 57" stroke="#c084fc" stroke-width="1.5" stroke-linecap="round" opacity="0.85" />
+  <path d="M12 57L32 54L50 50L68 46L88 43" stroke="#c084fc" stroke-width="1.5" stroke-linecap="round" opacity="0.85" />
+
+  <!-- Sparkle of Focus -->
+  <circle cx="50" cy="50" r="2" fill="#e9d5ff" />
+</svg>

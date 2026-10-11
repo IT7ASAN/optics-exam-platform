@@ -1,0 +1,20 @@
+[
+  {
+    "id": "usr-1",
+    "username": "ahmed_optics",
+    "password": "123456user",
+    "fullName": "أحمد علي حسن",
+    "stage": "المرحلة الثالثة",
+    "role": "student",
+    "createdAt": "2026-09-20"
+  },
+  {
+    "id": "usr-2",
+    "username": "zahraa_optics",
+    "password": "123456user",
+    "fullName": "زهراء محمد كاظم",
+    "stage": "المرحلة الرابعة",
+    "role": "student",
+    "createdAt": "2026-09-25"
+  }
+]

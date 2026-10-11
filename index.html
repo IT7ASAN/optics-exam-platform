@@ -1,0 +1,1025 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    
+    <!-- Primary SEO & Platform Identity -->
+    <title>منصة الامتحان المشترك – قسم هندسة وتكنولوجيا البصريات | Optics Common Exam Platform</title>
+    <meta name="description" content="منصة الامتحان المشترك لقسم هندسة وتكنولوجيا البصريات – تصفح وقراءة ملفات ومحاضرات الامتحان المشترك لجميع المراحل الدراسية مع قارئ PDF مدمج وبحث فوري وإدارة كاملة للمحتوى." />
+    <meta name="keywords" content="قسم هندسة وتكنولوجيا البصريات, الامتحان المشترك, البصريات الفيزيائية, فحص البصر, العدسات اللاصقة, أمراض العين, التقنيات الطبية" />
+    <meta name="theme-color" content="#7c3aed" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="امتحان البصريات" />
+
+    <!-- OpenGraph / Social Cards -->
+    <meta property="og:title" content="منصة الامتحان المشترك – قسم هندسة وتكنولوجيا البصريات" />
+    <meta property="og:description" content="المنصة الأكاديمية الرسمية لملفات ومحاضرات الامتحان التقويمي المشترك لقسم هندسة وتكنولوجيا البصريات." />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ar_IQ" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="./assets/images/logo.svg" />
+    <link rel="apple-touch-icon" href="./assets/images/logo.svg" />
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="./assets/css/style.css" />
+
+    <!-- External Libraries via CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  </head>
+  <body>
+
+    <!-- Global Loading Screen -->
+    <div id="global-loading-screen" style="position: fixed; inset: 0; z-index: 100; background: var(--bg-app); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem;">
+      <div class="spinner"></div>
+      <p style="font-size: 0.95rem; font-weight: 600; color: var(--accent);">جاري تهيئة منصة الامتحان المشترك...</p>
+    </div>
+
+    <!-- Global Error Screen (Fallback) -->
+    <div id="global-error-screen" style="position: fixed; inset: 0; z-index: 99; background: var(--bg-app); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; padding: 2rem; text-align: center;">
+      <div style="font-size: 3rem;">⚠️</div>
+      <h2 style="font-size: 1.35rem; font-weight: 700;">تعذر تحميل بيانات المنصة</h2>
+      <p class="error-detail" style="font-size: 0.9rem; color: var(--text-muted); max-width: 480px;">يرجى التأكد من تشغيل الموقع عبر خادم ويب محلي أو التأكد من سلامة اتصال الإنترنت.</p>
+      <button onclick="window.location.reload()" class="btn-primary" style="margin-top: 1rem;">
+        إعادة المحاولة
+      </button>
+    </div>
+
+    <!-- Top Navigation Header -->
+    <header class="site-header">
+      <div class="app-container header-inner">
+        <!-- Zone 1: Single Brand Lockup -->
+        <a href="#home" class="brand-link" aria-label="الصفحة الرئيسية لمنصة الامتحان المشترك">
+          <img src="./assets/images/logo.svg" alt="شعار قسم هندسة وتكنولوجيا البصريات" class="brand-logo-img" />
+          <div class="brand-text-lockup">
+            <span id="brand-platform-name" class="brand-title">منصة الامتحان المشترك</span>
+            <span id="brand-dept-name" class="brand-subtitle">قسم هندسة وتكنولوجيا البصريات</span>
+          </div>
+        </a>
+
+        <!-- Zone 2: Navigation Links (Desktop with Smooth Scrolling) -->
+        <nav class="header-nav" aria-label="التنقل الرئيسي">
+          <a href="#home" class="nav-link active" data-nav-target="home">الرئيسية</a>
+          <a href="#stages" class="nav-link" data-nav-target="stages">المراحل الدراسية</a>
+          <a href="#about" class="nav-link" data-nav-target="about">حول المنصة</a>
+          <a href="#admin" class="nav-link admin-only-nav" data-nav-target="admin" style="display: none; color: var(--accent); font-weight: 700;">لوحة الإدارة</a>
+        </nav>
+
+        <!-- Zone 3: Header Actions -->
+        <div class="header-actions">
+          <span id="academic-year-badge" class="year-badge">2026 - 2027</span>
+
+          <button id="header-search-btn" class="icon-btn" aria-label="فتح نافذة البحث" title="البحث الفوري (Ctrl+K)">
+            <i data-lucide="search" style="width: 18px; height: 18px;"></i>
+          </button>
+
+          <button id="theme-toggle-btn" class="icon-btn" aria-label="تبديل الوضع الليلي والنهاري" title="تبديل المظهر">
+            <i id="theme-icon" data-lucide="moon" style="width: 18px; height: 18px;"></i>
+          </button>
+
+          <!-- Login / Profile Trigger Button -->
+          <div id="auth-trigger-btn" style="cursor: pointer;">
+            <div class="icon-btn" title="تسجيل الدخول / إنشاء حساب">
+              <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Application Views -->
+    <main class="app-container" style="flex-grow: 1;">
+
+      <!-- 1. Home View -->
+      <section id="home-view" class="fade-in">
+        <!-- Hero Section -->
+        <div class="hero-section">
+          <div class="hero-grid">
+            <div class="hero-content">
+              <div class="hero-kicker">
+                <i data-lucide="award" style="width: 16px; height: 16px;"></i>
+                <span id="hero-kicker-text">الامتحان التقويمي الوزاري الموحد</span>
+              </div>
+              <h1 id="hero-title-text" class="hero-title">
+                كل ملفات الامتحان المشترك، في مكان واحد.
+              </h1>
+              <p id="hero-subtitle-text" class="hero-subtitle">
+                تصفح المحاضرات والمقررات الرسمية لقسم هندسة وتكنولوجيا البصريات، واقرأ ملفات PDF مباشرة وسلاسة عبر الهاتف والكمبيوتر دون الحاجة لتطبيقات إضافية.
+              </p>
+
+              <!-- Large Interactive Search Input -->
+              <div class="hero-search-wrapper">
+                <i data-lucide="search" class="hero-search-icon" style="width: 20px; height: 20px;"></i>
+                <input
+                  type="text"
+                  id="hero-search-input"
+                  class="hero-search-input"
+                  placeholder="ابحث باسم المادة، رقم المحاضرة، أو عنوان الملف..."
+                  aria-label="البحث في محاضرات الامتحان المشترك"
+                />
+                <span class="hero-search-shortcut">⌘K</span>
+              </div>
+
+              <!-- Dynamically Computed Stats Strip -->
+              <div class="hero-stats-row">
+                <div class="stat-card">
+                  <div id="stat-stages-count" class="stat-number">3</div>
+                  <div class="stat-label">مراحل دراسية</div>
+                </div>
+                <div class="stat-card">
+                  <div id="stat-subjects-count" class="stat-number">6</div>
+                  <div class="stat-label">مواد مشتركة</div>
+                </div>
+                <div class="stat-card">
+                  <div id="stat-files-count" class="stat-number">19</div>
+                  <div class="stat-label">ملف ومحاضرة</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Optical Eye/Lens Artwork Card (Editable by Admin) -->
+            <div class="hero-visual">
+              <div class="optics-hero-card">
+                <div class="optic-reticle-graphic">
+                  <div class="optic-svg-wrap">
+                    <img src="./assets/images/logo.svg" alt="عدسة بصرية" style="width: 62px; height: 62px;" />
+                  </div>
+                  <div>
+                    <h3 id="hero-card-heading">قسم هندسة وتكنولوجيا البصريات</h3>
+                    <p id="hero-card-text" style="margin-top: 0.35rem;">الملفات المعتمدة وزارياً للامتحان المشترك، مصنفة بدقة حسب المراحل الأكاديمية.</p>
+                  </div>
+                  <div id="hero-card-tags" class="curriculum-tags">
+                    <span>البصريات الهندسية</span>
+                    <span>·</span>
+                    <span>فحص الانكسار</span>
+                    <span>·</span>
+                    <span>العدسات اللاصقة</span>
+                    <span>·</span>
+                    <span>أمراض العين</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stages Grid Section (Target of Smooth Scroll) -->
+        <section id="stages-section" style="padding-top: 1rem;">
+          <div class="section-header">
+            <div class="section-title-wrap">
+              <span class="section-kicker">المسار الأكاديمي</span>
+              <h2 class="section-title">المراحل الدراسية للامتحان المشترك</h2>
+              <span class="section-subtitle">اختر مرحلتك لعرض المواد المقررة والملفات المرفقة</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Stages Grid generated by JS -->
+          <div id="stages-grid" class="stages-grid"></div>
+        </section>
+
+        <!-- Quick Info Banner (Editable by Admin) -->
+        <div class="about-card-container" style="margin-top: 1rem; margin-bottom: 2.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center;">
+              <i data-lucide="info" style="width: 20px; height: 20px;"></i>
+            </div>
+            <div>
+              <h3 id="info-banner-title" style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">ضوابط وتعليمات الامتحان المشترك</h3>
+              <p id="info-banner-subtitle" style="font-size: 0.85rem; color: var(--text-muted);">نظام الامتحان التقويمي الصادر من وزارة التعليم العالي والبحث العلمي</p>
+            </div>
+          </div>
+          <p id="info-banner-text" style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7;">
+            الامتحان المشترك لقسم هندسة وتكنولوجيا البصريات يشمل مادتين تخصصيتين في كل مرحلة دراسية (المرحلة الثانية، الثالثة، والرابعة). يتم تحديث المواد والملفات سنوياً عبر لوحة الإدارة وملف البيانات المركزي للمنصة، بما يضمن توافق المفردات الوزارية مع الكليات والأقسام المناظرة.
+          </p>
+        </div>
+      </section>
+
+      <!-- 2. Stage Detail View -->
+      <section id="stage-view" style="display: none;">
+        <nav id="stage-breadcrumb" class="breadcrumb-bar" aria-label="مسار التنقل"></nav>
+        
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2 id="stage-view-title" class="section-title">اسم المرحلة</h2>
+            <p id="stage-view-desc" class="section-subtitle" style="margin-top: 0.25rem;">وصف المرحلة</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <div id="stage-admin-controls" style="display: none; gap: 0.5rem;"></div>
+            <button onclick="App.navigateToHash('#home')" class="back-btn">
+              <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+              <span>العودة للرئيسية</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <span class="section-kicker">المقررات الوزارية</span>
+            <h3 style="font-size: 1.25rem; font-weight: 700;">مواد الامتحان المشترك لهذه المرحلة</h3>
+          </div>
+        </div>
+
+        <!-- Subjects Grid generated dynamically -->
+        <div id="stage-subjects-grid" class="subjects-grid"></div>
+      </section>
+
+      <!-- 3. Subject Detail View (Files List) -->
+      <section id="subject-view" style="display: none;">
+        <nav id="subject-breadcrumb" class="breadcrumb-bar" aria-label="مسار التنقل"></nav>
+
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2 id="subject-view-title" class="section-title">اسم المادة</h2>
+            <p id="subject-view-desc" class="section-subtitle" style="margin-top: 0.25rem;">وصف المادة</p>
+            <span id="subject-view-instructor" style="display: block; font-size: 0.8rem; color: var(--accent); font-weight: 600; margin-top: 0.35rem;"></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <div id="subject-admin-controls" style="display: none; gap: 0.5rem;"></div>
+            <button id="subject-back-to-stage" class="back-btn">
+              <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+              <span>الرجوع للمواد</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <span class="section-kicker">المحاضرات والملفات</span>
+            <h3 style="font-size: 1.25rem; font-weight: 700;">قائمة ملفات المحاضرات المعتمدة</h3>
+          </div>
+        </div>
+
+        <!-- Files list generated dynamically -->
+        <div id="subject-files-list" class="file-card-list"></div>
+      </section>
+
+      <!-- 4. In-App PDF Reader View -->
+      <section id="pdf-view" style="display: none;">
+        <nav id="pdf-breadcrumb" class="breadcrumb-bar" aria-label="مسار التنقل"></nav>
+
+        <div id="pdf-viewer-overlay" class="pdf-viewer-overlay">
+          <!-- Toolbar -->
+          <div class="pdf-viewer-toolbar">
+            <div class="pdf-doc-meta">
+              <button id="pdf-btn-back" class="btn-file-action-icon" title="رجوع لقائمة الملفات">
+                <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+              </button>
+              <div>
+                <h3 id="pdf-header-title" class="pdf-doc-title-text">عنوان المحاضرة</h3>
+                <span id="pdf-header-subtitle" style="font-size: 0.75rem; color: var(--text-muted); display: block;">المرحلة · المادة</span>
+              </div>
+            </div>
+
+            <div class="pdf-toolbar-controls">
+              <!-- Page Controls -->
+              <button id="pdf-btn-prev" class="btn-file-action-icon" title="الصفحة السابقة">
+                <i data-lucide="chevron-right" style="width: 18px; height: 18px;"></i>
+              </button>
+              <div class="pdf-page-display">
+                <span id="pdf-page-num">1</span>
+                <span>/</span>
+                <span id="pdf-page-count">--</span>
+              </div>
+              <button id="pdf-btn-next" class="btn-file-action-icon" title="الصفحة التالية">
+                <i data-lucide="chevron-left" style="width: 18px; height: 18px;"></i>
+              </button>
+
+              <span style="width: 1px; height: 22px; background: var(--border-medium); margin: 0 0.25rem;"></span>
+
+              <!-- Zoom Controls -->
+              <button id="pdf-btn-zoom-out" class="btn-file-action-icon" title="تصغير">
+                <i data-lucide="zoom-out" style="width: 16px; height: 16px;"></i>
+              </button>
+              <button id="pdf-btn-fit" class="btn-file-action-icon" title="ملاءمة العرض للشاشة">
+                <i data-lucide="expand" style="width: 16px; height: 16px;"></i>
+              </button>
+              <button id="pdf-btn-zoom-in" class="btn-file-action-icon" title="تكبير">
+                <i data-lucide="zoom-in" style="width: 16px; height: 16px;"></i>
+              </button>
+
+              <span style="width: 1px; height: 22px; background: var(--border-medium); margin: 0 0.25rem;"></span>
+
+              <!-- Utility Controls -->
+              <button id="pdf-btn-fullscreen" class="btn-file-action-icon" title="ملء الشاشة">
+                <i data-lucide="maximize-2" style="width: 16px; height: 16px;"></i>
+              </button>
+              <button id="pdf-btn-opentab" class="btn-file-action-icon" title="فتح في نافذة جديدة">
+                <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+              </button>
+              <button id="pdf-btn-download" class="btn-file-read" style="padding: 0.45rem 0.85rem; font-size: 0.8rem;" title="تنزيل الملف">
+                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+                <span>تنزيل</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Canvas Viewport -->
+          <div class="pdf-canvas-viewport">
+            <div id="pdf-loading-spinner" class="pdf-state-overlay" style="display: none; position: absolute;">
+              <div class="spinner"></div>
+              <p style="font-size: 0.85rem; color: var(--accent); font-weight: 500;">جاري تحميل وعرض الصفحة...</p>
+            </div>
+
+            <div id="pdf-error-state" class="pdf-state-overlay" style="display: none; position: absolute;">
+              <div style="font-size: 2.5rem;">⚠️</div>
+              <p style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">تعذر تحميل ملف PDF</p>
+            </div>
+
+            <canvas id="pdf-canvas" class="pdf-render-canvas"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. About View (Editable by Admin) -->
+      <section id="about-view" style="display: none;">
+        <nav class="breadcrumb-bar" aria-label="مسار التنقل">
+          <a href="#home" class="breadcrumb-item"><i data-lucide="home" style="width: 14px; height: 14px;"></i> الرئيسية</a>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item active">حول المنصة</span>
+        </nav>
+
+        <div class="about-card-container">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+            <img src="./assets/images/logo.svg" alt="شعار المنصة" style="width: 56px; height: 56px; border-radius: 14px;" />
+            <div>
+              <h2 id="about-page-title" style="font-size: 1.4rem; font-weight: 800; color: var(--text-primary);">منصة الامتحان المشترك – قسم هندسة وتكنولوجيا البصريات</h2>
+              <span id="about-page-subtitle" style="font-size: 0.85rem; color: var(--text-muted);">Optics Common Exam Platform · للعام الدراسي 2026 - 2027</span>
+            </div>
+          </div>
+
+          <p id="about-page-body" style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.8; margin-bottom: 1.5rem;">
+            تم تطوير هذه المنصة لتكون المرجع الرسمي والأول لطلبة قسم هندسة وتكنولوجيا البصريات للوصول الفوري والمنظم إلى جميع ملفات الامتحان التقويمي الوزاري المشترك. تم تصميم الواجهة بمعايير تطبيقات Apple الراقية بالثيم البنفسجي، لتعمل بكفاءة مطلقة على أجهزة iPhone، iPad، Mac، وشاشات الكمبيوتر.
+          </p>
+
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 1.5rem;">
+            مميزات المنصة الأكاديمية
+          </h3>
+
+          <div class="about-features-grid">
+            <div class="feature-box">
+              <div class="feature-box-icon"><i data-lucide="eye" style="width: 20px; height: 20px;"></i></div>
+              <h4>قارئ PDF داخلي مدمج</h4>
+              <p>تصفح وقراءة المحاضرات مباشرة داخل المنصة دون الحاجة لمغادرة الموقع أو تحميل تطبيقات إضافية.</p>
+            </div>
+
+            <div class="feature-box">
+              <div class="feature-box-icon"><i data-lucide="search" style="width: 20px; height: 20px;"></i></div>
+              <h4>محرك بحث ذكي وسريع</h4>
+              <p>بحث فوري بالعربية مع معالجة حركات التشكيل واختصارات لوحة المفاتيح (Cmd+K) للوصول المباشر لأي ملف.</p>
+            </div>
+
+            <div class="feature-box">
+              <div class="feature-box-icon"><i data-lucide="shield-check" style="width: 20px; height: 20px;"></i></div>
+              <h4>تحكم إداري كامل وشامل</h4>
+              <p>صلاحيات متكاملة للمشرف لتعديل نصوص الصفحة الرئيسية، البطاقات، والمواد ورفع الملفات من الجهاز.</p>
+            </div>
+
+            <div class="feature-box">
+              <div class="feature-box-icon"><i data-lucide="users" style="width: 20px; height: 20px;"></i></div>
+              <h4>نظام حسابات الطلاب</h4>
+              <p>تسجيل حسابات شخصية للطلبة مع إمكانية تحكم المشرف في اليوزر نيم ورموز المرور وإدارتها بكل سهولة.</p>
+            </div>
+
+            <div class="feature-box">
+              <div class="feature-box-icon"><i data-lucide="smartphone" style="width: 20px; height: 20px;"></i></div>
+              <h4>تصميم مخصص للهواتف والتمرير السلس</h4>
+              <p>شريط سفلي iOS وتمرير سلس فائق النعومة بين أقسام الصفحة مع توافق تام مع شاشات iPhone الحديثة.</p>
+            </div>
+
+            <div class="feature-box">
+              <div class="feature-box-icon"><i data-lucide="download-cloud" style="width: 20px; height: 20px;"></i></div>
+              <h4>تصدير JSON متوافق مع GitHub Pages</h4>
+              <p>إمكانية تصدير التعديلات كملف exams.json بضغطة زر واحدة لرفعها وتحديث مستودع GitHub فوراً.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Admin Control Center View (مركز التحكم والإدارة الشاملة) -->
+      <section id="admin-view" style="display: none;">
+        <nav class="breadcrumb-bar" aria-label="مسار التنقل">
+          <a href="#home" class="breadcrumb-item"><i data-lucide="home" style="width: 14px; height: 14px;"></i> الرئيسية</a>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item active">لوحة تحكم المشرف (it7asan)</span>
+        </nav>
+
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <span class="section-kicker">إدارة المنصة والمحتوى</span>
+            <h2 class="section-title">مركز إعدادات المشرف والتحكم الأكاديمي</h2>
+            <span class="section-subtitle">يمكنك هنا تعديل جميع عناصر الموقع، نصوص الهيرو، صفحة حول المنصة، إدارة المواد والملفات، ونشر التعديلات لجميع الطلاب.</span>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button id="quick-publish-gh-btn" class="btn-admin-success" style="font-size: 0.8rem; padding: 0.5rem 0.9rem;" title="نشر فوري للجميع على GitHub">
+              <i data-lucide="cloud-upload" style="width: 14px; height: 14px;"></i>
+              <span>🚀 نشر للجميع على GitHub</span>
+            </button>
+            <button id="export-json-btn" class="btn-primary" style="font-size: 0.8rem; padding: 0.5rem 0.9rem;" title="تنزيل ملف exams.json الحالي لتحديث GitHub">
+              <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+              <span>تصدير exams.json</span>
+            </button>
+            <button id="admin-logout-btn" class="btn-admin-danger">
+              <i data-lucide="log-out" style="width: 15px; height: 15px;"></i>
+              <span>تسجيل الخروج</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Deployment Status Banner -->
+        <div id="admin-sync-banner" class="about-card-container" style="margin-bottom: 1.25rem; padding: 1rem 1.25rem; border-radius: var(--radius-lg); border: 1.5px solid var(--accent); background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(167, 139, 250, 0.04));">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: flex-start; gap: 0.75rem; flex: 1; min-width: 260px;">
+              <div id="sync-banner-icon-box" style="width: 38px; height: 38px; border-radius: 10px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+                <i data-lucide="globe" style="width: 20px; height: 20px;"></i>
+              </div>
+              <div>
+                <h4 id="sync-banner-title" style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
+                  حالة النشر والمزامنة لجميع المستخدمين
+                </h4>
+                <p id="sync-banner-desc" style="font-size: 0.825rem; color: var(--text-secondary); line-height: 1.5;">
+                  جاري فحص حالة النشر ومزامنة البيانات...
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <button onclick="App.switchAdminTab('publish-sync')" class="btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.85rem;">
+                <i data-lucide="settings" style="width: 14px; height: 14px;"></i>
+                <span>إعدادات النشر لـ GitHub</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin Navigation Tabs -->
+        <div class="admin-tabs-nav">
+          <button class="admin-tab-btn active" data-admin-tab="home-content">
+            <i data-lucide="layout" style="width: 16px; height: 16px;"></i>
+            <span>1. عناصر الشاشة الرئيسية والبطاقة</span>
+          </button>
+          <button class="admin-tab-btn" data-admin-tab="about-content">
+            <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+            <span>2. صفحة حول المنصة</span>
+          </button>
+          <button class="admin-tab-btn" data-admin-tab="stages-subjects">
+            <i data-lucide="layers" style="width: 16px; height: 16px;"></i>
+            <span>3. المواد والمحاضرات والملفات</span>
+          </button>
+          <button class="admin-tab-btn" data-admin-tab="users-management">
+            <i data-lucide="users" style="width: 16px; height: 16px;"></i>
+            <span>4. حسابات الطلاب والمستخدمين</span>
+          </button>
+          <button class="admin-tab-btn" data-admin-tab="publish-sync">
+            <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
+            <span>5. نشر ومزامنة البيانات للجميع (GitHub & Cloud)</span>
+          </button>
+        </div>
+
+        <!-- Admin Tab 1: Home Screen & Hero Card Customization -->
+        <div id="tab-pane-home-content" class="admin-tab-pane">
+          <div class="admin-card-container">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--accent); display: flex; align-items: center; gap: 0.5rem;">
+              <i data-lucide="sparkles" style="width: 20px; height: 20px;"></i>
+              <span>تعديل نصوص الصفحة الرئيسية وعنصر بطاقة القسم</span>
+            </h3>
+            <form id="home-content-form">
+              <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;" class="md:grid-cols-2">
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="admin-platform-name">اسم المنصة</label>
+                  <input id="admin-platform-name" type="text" class="admin-form-input" required />
+                </div>
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="admin-dept-name">اسم القسم</label>
+                  <input id="admin-dept-name" type="text" class="admin-form-input" required />
+                </div>
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="admin-faculty-name">الكلية / الجامعة</label>
+                  <input id="admin-faculty-name" type="text" class="admin-form-input" required />
+                </div>
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="admin-academic-year">السنة الدراسية</label>
+                  <input id="admin-academic-year" type="text" class="admin-form-input" required />
+                </div>
+              </div>
+
+              <div style="border-top: 1px solid var(--border-subtle); margin: 1.25rem 0; padding-top: 1.25rem;">
+                <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.75rem;">
+                  نصوص القسم الترحيبي (Hero Section)
+                </h4>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;" class="md:grid-cols-2">
+                  <div class="admin-form-group">
+                    <label class="admin-form-label" for="admin-hero-kicker">شارة العنوان (Kicker)</label>
+                    <input id="admin-hero-kicker" type="text" class="admin-form-input" />
+                  </div>
+                  <div class="admin-form-group">
+                    <label class="admin-form-label" for="admin-hero-title">العنوان الرئيسي</label>
+                    <input id="admin-hero-title" type="text" class="admin-form-input" />
+                  </div>
+                </div>
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="admin-hero-subtitle">العنوان الفرعي للقسم الترحيبي</label>
+                  <textarea id="admin-hero-subtitle" class="admin-form-textarea" rows="2"></textarea>
+                </div>
+              </div>
+
+              <!-- Hero Visual Card Elements Customization -->
+              <div style="background: var(--bg-surface-subtle); padding: 1.25rem; border-radius: var(--radius-lg); border: 1.5px solid var(--border-medium); margin-bottom: 1.25rem;">
+                <h4 style="font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+                  <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
+                  <span>تعديل عنصر بطاقة الشاشة الأساسية (بطاقة قسم هندسة وتكنولوجيا البصريات)</span>
+                </h4>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+                  هذا هو العنصر البصري الموضح على يسار الشاشة الرئيسية والذي يحتوي على العنوان والوصف وقائمة الوسوم.
+                </p>
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="admin-hero-card-heading">العنوان المكتوب في البطاقة</label>
+                  <input id="admin-hero-card-heading" type="text" class="admin-form-input" placeholder="قسم هندسة وتكنولوجيا البصريات" />
+                </div>
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="admin-hero-card-text">النص المكتوب تحت العنوان</label>
+                  <textarea id="admin-hero-card-text" class="admin-form-textarea" rows="2" placeholder="الملفات المعتمدة وزارياً للامتحان المشترك، مصنفة بدقة حسب المراحل الأكاديمية."></textarea>
+                </div>
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="admin-hero-card-tags">وسوم التخصصات الأربعة (افصل بينها بفاصلة)</label>
+                  <input id="admin-hero-card-tags" type="text" class="admin-form-input" placeholder="البصريات الهندسية، فحص الانكسار، العدسات اللاصقة، أمراض العين" />
+                </div>
+              </div>
+
+              <!-- Info Banner Elements -->
+              <div style="border-top: 1px solid var(--border-subtle); margin: 1.25rem 0; padding-top: 1.25rem;">
+                <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.75rem;">
+                  شريط الضوابط والتعليمات أسفل الصفحة
+                </h4>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;" class="md:grid-cols-2">
+                  <div class="admin-form-group">
+                    <label class="admin-form-label" for="admin-info-title">عنوان الشريط</label>
+                    <input id="admin-info-title" type="text" class="admin-form-input" />
+                  </div>
+                  <div class="admin-form-group">
+                    <label class="admin-form-label" for="admin-info-subtitle">العنوان الفرعي</label>
+                    <input id="admin-info-subtitle" type="text" class="admin-form-input" />
+                  </div>
+                </div>
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="admin-info-text">نص الضوابط</label>
+                  <textarea id="admin-info-text" class="admin-form-textarea" rows="2"></textarea>
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                <button type="submit" class="btn-admin-success">
+                  <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+                  <span>حفظ تعديلات الشاشة الرئيسية</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Admin Tab 2: About Page Content Customization -->
+        <div id="tab-pane-about-content" class="admin-tab-pane" style="display: none;">
+          <div class="admin-card-container">
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--accent); display: flex; align-items: center; gap: 0.5rem;">
+              <i data-lucide="file-text" style="width: 20px; height: 20px;"></i>
+              <span>تعديل محتوى ونصوص صفحة «حول المنصة»</span>
+            </h3>
+            <form id="about-content-form">
+              <div class="admin-form-group">
+                <label class="admin-form-label" for="admin-about-title">عنوان الصفحة</label>
+                <input id="admin-about-title" type="text" class="admin-form-input" required />
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-form-label" for="admin-about-subtitle">العنوان الفرعي</label>
+                <input id="admin-about-subtitle" type="text" class="admin-form-input" required />
+              </div>
+              <div class="admin-form-group">
+                <label class="admin-form-label" for="admin-about-body">النبذة والمحتوى التعريفي الكامل</label>
+                <textarea id="admin-about-body" class="admin-form-textarea" rows="6" required></textarea>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                <button type="submit" class="btn-admin-success">
+                  <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+                  <span>حفظ نصوص صفحة حول المنصة</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Admin Tab 3: Stages, Subjects & Lecture Files -->
+        <div id="tab-pane-stages-subjects" class="admin-tab-pane" style="display: none;">
+          <div class="admin-card-container">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+              <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="layers" style="width: 20px; height: 20px;"></i>
+                <span>إدارة المراحل والمواد وإضافة الملفات من الجهاز</span>
+              </h3>
+              <button id="reset-defaults-btn" class="btn-admin-danger" style="font-size: 0.8rem; padding: 0.5rem 0.9rem;" title="استعادة الملف الأصلي">
+                <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
+                <span>استعادة البيانات الافتراضية</span>
+              </button>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+              يمكنك إضافة وتعديل المواد، وإضافة محاضرات PDF مباشرة من جهازك (اختيار ملف من الكمبيوتر أو الهاتف) لفتحها فوراً وقراءتها داخل الموقع.
+            </p>
+
+            <div id="admin-stages-list-wrap"></div>
+          </div>
+        </div>
+
+        <!-- Admin Tab 4: Users & Passwords Management -->
+        <div id="tab-pane-users-management" class="admin-tab-pane" style="display: none;">
+          <div class="admin-card-container">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 0.5rem;">
+                  <i data-lucide="users" style="width: 20px; height: 20px;"></i>
+                  <span>إدارة حسابات الطلاب والمستخدمين وتغيير الرموز واليوزرات</span>
+                </h3>
+                <p style="font-size: 0.825rem; color: var(--text-muted);">
+                  تظهر هنا جميع الحسابات المسجلة من قبل الطلبة. يمكنك تغيير اسم المستخدم ورمز المرور لأي حساب أو حذفه.
+                </p>
+              </div>
+              <button class="btn-primary" onclick="App.openAddUserModal()" style="font-size: 0.825rem; padding: 0.5rem 1rem;">
+                <i data-lucide="user-plus" style="width: 15px; height: 15px;"></i>
+                <span>+ إنشاء حساب طالب جديد</span>
+              </button>
+            </div>
+
+            <!-- Users Table -->
+            <div class="users-table-wrap">
+              <table class="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>اسم المستخدم (يوزر نيم)</th>
+                    <th>الاسم الكامل</th>
+                    <th>المرحلة الدراسية</th>
+                    <th>رمز المرور الحالي</th>
+                    <th>تاريخ التسجيل</th>
+                    <th>الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-users-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin Tab 5: Publishing & Live Synchronization Center (GitHub & Cloud) -->
+        <div id="tab-pane-publish-sync" class="admin-tab-pane" style="display: none;">
+          
+          <!-- Core Question & Answer Banner: Project Files Upload vs Repository Info -->
+          <div class="admin-card-container" style="border: 2px solid var(--accent); background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(167, 139, 250, 0.03)); margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem;">
+              <div style="width: 48px; height: 48px; border-radius: 14px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
+                <i data-lucide="help-circle" style="width: 26px; height: 26px;"></i>
+              </div>
+              <div>
+                <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.4rem;">
+                  هل يجب رفع ملفات المشروع على المستودع أولاً، أم فقط إدخال بيانات المستودع؟
+                </h3>
+                <p style="font-size: 0.95rem; color: var(--text-secondary); line-height: 1.7;">
+                  <strong>نعم، يجب رفع ملفات المشروع كاملة إلى مستودع GitHub لأول مرة فقط!</strong><br />
+                  لكي يعمل موقعك على رابط GitHub Pages (مثل <code>https://username.github.io/optics-platform/</code>)، يحتاج GitHub إلى ملفات الموقع الأساسية (<code>index.html</code>، والتنسيقات، والشعار، وقارئ الـ PDF).
+                </p>
+              </div>
+            </div>
+
+            <!-- Two Stages Comparison Grid -->
+            <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1.25rem;" class="md:grid-cols-2">
+              <div style="background: var(--bg-surface); padding: 1.15rem; border-radius: var(--radius-md); border: 1.5px solid var(--border-medium);">
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 800; color: var(--accent); font-size: 0.95rem; margin-bottom: 0.5rem;">
+                  <span style="background: var(--accent-light); padding: 0.2rem 0.6rem; border-radius: 6px;">المرحلة 1</span>
+                  <span>تأسيس الموقع (تُعمل مرة واحدة فقط):</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 0.75rem;">
+                  ترفع ملفات المشروع كاملة إلى مستودع GitHub وتفعّل خيار <strong>Settings → Pages</strong>. سيعمل رابط الموقع مباشرة.
+                </p>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <button type="button" onclick="App.downloadFullProjectZip()" class="btn-primary" style="font-size: 0.8rem; padding: 0.5rem 0.9rem; gap: 0.4rem;">
+                    <i data-lucide="archive" style="width: 15px; height: 15px;"></i>
+                    <span>📦 تحميل حزمة المشروع (ZIP) للرفع الأول</span>
+                  </button>
+                  <button type="button" onclick="App.copyGitCommands()" class="btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 0.9rem; gap: 0.4rem;">
+                    <i data-lucide="terminal" style="width: 15px; height: 15px;"></i>
+                    <span>📋 نسخ أوامر Git</span>
+                  </button>
+                </div>
+              </div>
+
+              <div style="background: var(--bg-surface); padding: 1.15rem; border-radius: var(--radius-md); border: 1.5px solid var(--accent);">
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 800; color: var(--success); font-size: 0.95rem; margin-bottom: 0.5rem;">
+                  <span style="background: rgba(16, 185, 129, 0.15); color: var(--success); padding: 0.2rem 0.6rem; border-radius: 6px;">المرحلة 2</span>
+                  <span>التحديثات اليومية والمستمرة:</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 0.75rem;">
+                  بعد أن يعمل الموقع، <strong>لا تحتاج لإعادة رفع المشروع كاملاً أبداً!</strong> فقط استخدم <strong>الطريقة الأولى</strong> (بنقرة زر عبر التوكن) أو <strong>الطريقة الثانية</strong> (استبدال ملف exams.json فقط).
+                </p>
+                <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">
+                  ✨ ملفات الموقع تظل ثابتة، بينما تتغير بيانات المواد والمحاضرات تلقائياً للجميع.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Method 1: Automatic 1-Click Publish to GitHub API -->
+          <div class="admin-card-container" style="border: 1px solid var(--border-medium); margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="git-pull-request" style="width: 20px; height: 20px;"></i>
+                <span>الطريقة 1: النشر المباشر إلى مستودع GitHub بنقرة زر واحدة (عبر Token)</span>
+              </h3>
+              <span class="badge" style="background: var(--accent-light); color: var(--accent); font-weight: 700;">موصى به لتحديثات سريعة</span>
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+              أدخل بيانات مستودعك مرة واحدة فقط (يتم حفظها بأمان في جهازك). يمكنك فحص الاتصال للتأكد من صحة التوكن، ثم الضغط على زر النشر ليقوم الموقع بتحديث ملف <code>data/exams.json</code> في المستودع فوراً!
+            </p>
+
+            <form id="github-sync-form">
+              <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;" class="md:grid-cols-2">
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="gh-repo-name">
+                    اسم مستودع GitHub (Repository) <span style="color: var(--danger);">*</span>
+                  </label>
+                  <input id="gh-repo-name" type="text" class="admin-form-input" placeholder="مثال: username/optics-exam-platform" required />
+                  <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block;">
+                    اسم حسابك على GitHub يليه اسم المستودع (أو الصق رابط المستودع كاملاً)
+                  </span>
+                </div>
+
+                <div class="admin-form-group">
+                  <label class="admin-form-label" for="gh-branch-name">الفرع (Branch)</label>
+                  <input id="gh-branch-name" type="text" class="admin-form-input" value="main" placeholder="main أو gh-pages" />
+                  <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block;">
+                    الفرع الذي يُنشر منه موقع GitHub Pages (غالباً main)
+                  </span>
+                </div>
+              </div>
+
+              <div class="admin-form-group" style="margin-top: 0.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                  <label class="admin-form-label" for="gh-token-input" style="margin-bottom: 0;">
+                    رمز وصول GitHub الشخصي (Personal Access Token) <span style="color: var(--danger);">*</span>
+                  </label>
+                  <a href="https://github.com/settings/tokens/new?scopes=repo&description=Optics+Exam+Platform+Sync" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: var(--accent); font-weight: 600; text-decoration: underline;">
+                    🔗 إنشاء Token جديد مجاناً في ثوانٍ
+                  </a>
+                </div>
+                <input id="gh-token-input" type="password" class="admin-form-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" required autocomplete="off" />
+                <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; display: block;">
+                  رمز مجاني من GitHub بصلاحية <code>repo</code> أو <code>public_repo</code> ليتمكن المتصفح من إرسال التحديث لمستودعك.
+                </span>
+              </div>
+
+              <!-- Status Box for GitHub Publish & Test Connection -->
+              <div id="gh-publish-status-box" style="display: none; padding: 0.9rem; border-radius: var(--radius-md); margin: 1rem 0; font-size: 0.85rem;"></div>
+
+              <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; flex-wrap: wrap;">
+                <button type="button" id="gh-test-conn-btn" class="btn-secondary" style="padding: 0.75rem 1.25rem; font-weight: 600; gap: 0.4rem;">
+                  <i data-lucide="check-check" style="width: 16px; height: 16px;"></i>
+                  <span>🔍 فحص واختبار الاتصال والتوكن</span>
+                </button>
+                <button type="submit" id="gh-publish-submit-btn" class="btn-primary" style="padding: 0.75rem 1.5rem; font-weight: 700; gap: 0.5rem;">
+                  <i data-lucide="cloud-upload" style="width: 18px; height: 18px;"></i>
+                  <span>🚀 نشر التعديلات فوراً لجميع الطلاب على GitHub</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Method 2: Manual Download & Replace (Zero Token Needed) -->
+          <div class="admin-card-container" style="border: 1px solid var(--border-medium); margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="download-cloud" style="width: 20px; height: 20px;"></i>
+                <span>الطريقة 2: استبدال ملف exams.json يدوياً (بدون الحاجة لـ Token نهائياً)</span>
+              </h3>
+              <span class="badge" style="background: var(--bg-surface-subtle); color: var(--text-secondary);">سهل ومضمون 100%</span>
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+              إذا كنت لا ترغب في إدخال GitHub Token، هذه الطريقة سهلة جداً ولا تستغرق سوى دقيقة واحدة لتحديث المنصة لجميع الطلاب:
+            </p>
+
+            <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1.25rem;" class="md:grid-cols-3">
+              <div style="background: var(--bg-surface-subtle); padding: 1.15rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); text-align: center;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; font-weight: 800; font-size: 1.1rem;">1</div>
+                <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.35rem;">حمّل الملف المحدث</h4>
+                <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">اضغط زر التحميل أدناه لتنزيل أحدث نسخة من ملف <code>exams.json</code> لجهازك.</p>
+              </div>
+
+              <div style="background: var(--bg-surface-subtle); padding: 1.15rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); text-align: center;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; font-weight: 800; font-size: 1.1rem;">2</div>
+                <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.35rem;">افتح مجلد data</h4>
+                <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">اضغط زر «فتح مجلد data في مستودعك» لفتح الصفحة في GitHub مباشرة.</p>
+              </div>
+
+              <div style="background: var(--bg-surface-subtle); padding: 1.15rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); text-align: center;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; font-weight: 800; font-size: 1.1rem;">3</div>
+                <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.35rem;">اسحب الملف واضغط Commit</h4>
+                <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">اسحب الملف المحدث واضغط Commit Changes. وخلال 30 ثانية تظهر التعديلات للجميع!</p>
+              </div>
+            </div>
+
+            <!-- Action Buttons for Method 2 -->
+            <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+              <button type="button" onclick="window.DataLayer.exportDataAsJSON(); App.showToast('تم تنزيل ملف exams.json المحدث بنجاح 📥');" class="btn-primary" style="padding: 0.75rem 1.5rem; font-size: 0.9rem; gap: 0.5rem;">
+                <i data-lucide="download" style="width: 18px; height: 18px;"></i>
+                <span>📥 1. تحميل ملف exams.json المحدّث</span>
+              </button>
+              <button type="button" onclick="App.openGitHubRepoDataFolder()" class="btn-secondary" style="padding: 0.75rem 1.25rem; font-size: 0.9rem; gap: 0.5rem;">
+                <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+                <span>📂 2. فتح مجلد data في مستودعك على GitHub</span>
+              </button>
+              <button type="button" onclick="App.copyJsonToClipboard()" class="btn-secondary" style="padding: 0.75rem 1.25rem; font-size: 0.9rem; gap: 0.5rem;">
+                <i data-lucide="copy" style="width: 16px; height: 16px;"></i>
+                <span>📋 3. نسخ كود JSON للحافظة</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- 7. Not Found View (404) -->
+      <section id="not-found-view" style="display: none;">
+        <div class="empty-state" style="padding: 4rem 1.5rem;">
+          <div class="empty-icon-wrap" style="width: 64px; height: 64px;">
+            <i data-lucide="alert-circle" style="width: 32px; height: 32px;"></i>
+          </div>
+          <h3 class="empty-title">عذراً، الصفحة غير متوفرة</h3>
+          <p id="not-found-message" class="empty-desc">الصفحة أو الملف الذي تحاول الوصول إليه غير موجود أو تم نقله.</p>
+          <button onclick="App.navigateToHash('#home')" class="btn-primary" style="margin-top: 1rem;">
+            العودة للصفحة الرئيسية
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Auth Modal (Sign In & Sign Up with Clean Apple Tabs - Admin Credentials Hidden) -->
+    <div id="login-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="تسجيل الدخول وإنشاء الحساب">
+      <div class="modal-box" style="max-width: 440px;">
+        <div class="modal-header">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--accent-light); color: var(--accent); display: flex; align-items: center; justify-content: center;">
+              <i data-lucide="user-check" style="width: 16px; height: 16px;"></i>
+            </div>
+            <h3 id="auth-modal-title" style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">تسجيل الدخول إلى المنصة</h3>
+          </div>
+          <button id="close-login-btn" class="icon-btn" style="width: 32px; height: 32px;" title="إغلاق">
+            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+          </button>
+        </div>
+
+        <div style="padding: 1.25rem 1.5rem 1.5rem;">
+          <!-- Segmented Tab Switcher -->
+          <div class="auth-segmented-tabs">
+            <button id="tab-btn-signin" type="button" class="auth-tab-btn active" onclick="App.switchAuthTab('signin')">تسجيل الدخول</button>
+            <button id="tab-btn-signup" type="button" class="auth-tab-btn" onclick="App.switchAuthTab('signup')">إنشاء حساب جديد</button>
+          </div>
+
+          <!-- Alert / Error message -->
+          <div id="login-error-msg" style="display: none; padding: 0.75rem; background: var(--danger-bg); color: var(--danger); border-radius: 8px; font-size: 0.825rem; font-weight: 600; margin-bottom: 1rem;"></div>
+
+          <!-- Sign In Form (Admin credentials hidden) -->
+          <form id="login-form">
+            <div class="admin-form-group">
+              <label class="admin-form-label" for="login-username">اسم المستخدم (يوزر نيم)</label>
+              <input id="login-username" type="text" class="admin-form-input" placeholder="اسم الحساب" required autocomplete="username" />
+            </div>
+
+            <div class="admin-form-group">
+              <label class="admin-form-label" for="login-password">رمز المرور (كلمة السر)</label>
+              <input id="login-password" type="password" class="admin-form-input" placeholder="••••••••" required autocomplete="current-password" />
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.75rem; padding: 0.75rem;">
+              <span>تسجيل الدخول</span>
+              <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+            </button>
+          </form>
+
+          <!-- Sign Up / Register Form -->
+          <form id="register-form" style="display: none;">
+            <div class="admin-form-group">
+              <label class="admin-form-label" for="reg-fullname">الاسم الكامل للطالب / المستخدم</label>
+              <input id="reg-fullname" type="text" class="admin-form-input" placeholder="مثال: علي حسن كاظم" required />
+            </div>
+
+            <div class="admin-form-group">
+              <label class="admin-form-label" for="reg-username">اسم المستخدم الجديد (يوزر نيم بالإنجليزية أو العربية)</label>
+              <input id="reg-username" type="text" class="admin-form-input" placeholder="مثال: ali_optics" required autocomplete="username" />
+            </div>
+
+            <div class="admin-form-group">
+              <label class="admin-form-label" for="reg-password">رمز المرور (كلمة السر)</label>
+              <input id="reg-password" type="password" class="admin-form-input" placeholder="اختر رمز مرور قوي" required autocomplete="new-password" />
+            </div>
+
+            <div class="admin-form-group">
+              <label class="admin-form-label" for="reg-stage">المرحلة الدراسية</label>
+              <select id="reg-stage" class="admin-form-select">
+                <option value="المرحلة الثانية">المرحلة الثانية</option>
+                <option value="المرحلة الثالثة">المرحلة الثالثة</option>
+                <option value="المرحلة الرابعة">المرحلة الرابعة</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%; margin-top: 0.75rem; padding: 0.75rem;">
+              <span>إنشاء الحساب والبدء</span>
+              <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Universal Edit & Add Modal with Local Device File Picker Support -->
+    <div id="edit-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="تعديل المحتوى">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3 id="edit-modal-title" style="font-size: 1.1rem; font-weight: 700; color: var(--accent);">تعديل البيانات</h3>
+          <button onclick="App.closeEditModal()" class="icon-btn" style="width: 32px; height: 32px;" title="إغلاق">
+            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+          </button>
+        </div>
+        <form id="edit-modal-form" style="padding: 1.5rem; overflow-y: auto; max-height: 70vh;">
+          <div id="edit-modal-fields"></div>
+          <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+            <button type="button" onclick="App.closeEditModal()" class="back-btn">إلغاء</button>
+            <button type="submit" class="btn-admin-success">حفظ التغييرات</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Global Live Search Modal Overlay -->
+    <div id="search-modal-backdrop" class="search-modal-backdrop" role="dialog" aria-modal="true" aria-label="نافذة البحث">
+      <div class="search-modal-box">
+        <div class="search-modal-header">
+          <i data-lucide="search" style="width: 20px; height: 20px; color: var(--accent);"></i>
+          <input
+            type="text"
+            id="modal-search-input"
+            class="search-modal-input"
+            placeholder="ابحث باسم المادة، رقم المحاضرة، أو كلمات من العنوان..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="clear-search-btn" class="icon-btn" style="width: 30px; height: 30px; display: none;" title="مسح النص">
+            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+          </button>
+          <button id="close-search-btn" class="icon-btn" style="width: 34px; height: 34px;" title="إغلاق (Esc)">
+            <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+          </button>
+        </div>
+        <div id="search-results-list" class="search-results-list"></div>
+      </div>
+    </div>
+
+
+
+    <!-- Mobile Fixed Bottom Tab Bar (Apple iOS 5-Tab Bar) -->
+    <nav class="bottom-tab-bar" aria-label="شريط التنقل السفلي">
+      <div class="tab-bar-grid">
+        <button class="tab-btn active" data-nav-target="home">
+          <i data-lucide="home" style="width: 20px; height: 20px;"></i>
+          <span>الرئيسية</span>
+        </button>
+        <button class="tab-btn" data-nav-target="stages">
+          <i data-lucide="graduation-cap" style="width: 20px; height: 20px;"></i>
+          <span>المراحل</span>
+        </button>
+        <button class="tab-btn" data-nav-target="search">
+          <i data-lucide="search" style="width: 20px; height: 20px;"></i>
+          <span>البحث</span>
+        </button>
+        <button class="tab-btn" data-nav-target="about">
+          <i data-lucide="info" style="width: 20px; height: 20px;"></i>
+          <span>حول</span>
+        </button>
+        <button id="auth-mobile-tab-btn" class="tab-btn" data-nav-target="admin">
+          <i data-lucide="user" style="width: 20px; height: 20px;"></i>
+          <span>دخول</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <!-- Application JavaScript Modules -->
+    <script src="./assets/js/data.js"></script>
+    <script src="./assets/js/search.js"></script>
+    <script src="./assets/js/pdf-viewer.js"></script>
+    <script src="./assets/js/app.js"></script>
+  </body>
+</html>
