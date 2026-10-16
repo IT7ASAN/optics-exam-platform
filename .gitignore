@@ -8,3 +8,4 @@ coverage/
 !.env.example
 data/users.json
 data/exams.last.json
+supabase/.temp/

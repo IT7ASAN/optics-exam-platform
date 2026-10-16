@@ -93,15 +93,15 @@ const PDFViewer = (() => {
   /**
    * خيارات محرك PDF.js - معالجة خطوط النصوص العربية بدقة تامة لمنع تقطع الحروف
    */
-  function getPdfJsDocumentOptions(bytes) {
+  function getPdfJsDocumentOptions(source) {
     return {
-      data: bytes,
+      ...source,
       cMapUrl: CMAP_URL,
       cMapPacked: true,
       standardFontDataUrl: STANDARD_FONTS_URL,
-      disableFontFace: false,
-      useSystemFonts: false, // يمنع استبدال خط المستند بخطوط النظام مما يحافظ على ترابط وتشكيل الحروف العربية
-      fontExtraProperties: true,
+      // رسم الحروف كمسارات من خط المستند نفسه بدل @font-face: يمنع تقطع الكلمات العربية في ملفات Word
+      disableFontFace: true,
+      useSystemFonts: false,
       isEvalSupported: false
     };
   }
@@ -186,11 +186,16 @@ const PDFViewer = (() => {
         currentPdfDoc = null;
       }
 
-      const bytes = await resolvePdfBytes(filePath);
-      currentPdfBytes = bytes;
-      currentObjectUrl = bytesToObjectUrl(bytes);
+      // الملفات البعيدة تُقرأ تدريجياً لتظهر الصفحة الأولى قبل اكتمال التنزيل
+      let source;
+      if (pdfBytesCache.has(filePath) || isEmbeddedPdfData(filePath)) {
+        currentPdfBytes = await resolvePdfBytes(filePath);
+        source = { data: currentPdfBytes.slice() };
+      } else {
+        source = { url: filePath, rangeChunkSize: 262144 };
+      }
 
-      const loadingTask = window.pdfjsLib.getDocument(getPdfJsDocumentOptions(bytes));
+      const loadingTask = window.pdfjsLib.getDocument(getPdfJsDocumentOptions(source));
 
       currentPdfDoc = await loadingTask.promise;
       totalNumPages = currentPdfDoc.numPages;
