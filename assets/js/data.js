@@ -14,11 +14,110 @@ const DataLayer = (() => {
   // GitHub Pages is static; the previous Render hostname currently returns no-server/404.
   const DEPLOYED_API_BASE = '';
 
+  const SUPABASE_CONFIG = window.SUPABASE_CONFIG || {};
+  const AUTH_EMAIL_DOMAIN = SUPABASE_CONFIG.authEmailDomain || 'optics.local';
+  const LECTURES_BUCKET = 'lectures';
+  let supabaseClient = null;
+
+  function getSupabase() {
+    if (supabaseClient) return supabaseClient;
+    if (!SUPABASE_CONFIG.url || !SUPABASE_CONFIG.anonKey || !window.supabase?.createClient) return null;
+    supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+      auth: { persistSession: true, autoRefreshToken: true, storageKey: 'optics_supabase_auth' }
+    });
+    return supabaseClient;
+  }
+
+  function isSupabaseEnabled() {
+    return Boolean(getSupabase());
+  }
+
+  function usernameToEmail(username) {
+    return `${username}@${AUTH_EMAIL_DOMAIN}`;
+  }
+
+  function translateSupabaseError(error) {
+    const message = (error && (error.message || error.error_description || error.error)) || String(error || '');
+    if (/invalid login credentials/i.test(message)) return 'اسم المستخدم أو رمز المرور غير صحيح!';
+    if (/already.*(registered|exists)|duplicate key/i.test(message)) return 'اسم المستخدم مسجل مسبقاً.';
+    if (/password/i.test(message) && /least|short|weak/i.test(message)) return 'رمز المرور قصير جداً (6 أحرف على الأقل).';
+    if (/rate limit|too many/i.test(message)) return 'محاولات كثيرة، يرجى الانتظار قليلاً ثم إعادة المحاولة.';
+    if (/not authorized|permission denied|row-level security|42501/i.test(message)) return 'لا تملك صلاحية تنفيذ هذه العملية. سجّل الدخول بحساب المشرف.';
+    return message || 'حدث خطأ غير متوقع.';
+  }
+
+  function notifyError(message) {
+    console.error(message);
+    if (window.App?.showToast) window.App.showToast(message, 6000);
+    else alert(message);
+  }
+
+  function profileToUser(profile) {
+    return {
+      id: profile.id,
+      username: profile.username,
+      fullName: profile.full_name,
+      stage: profile.stage,
+      role: profile.role,
+      createdAt: profile.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : '-'
+    };
+  }
+
+  function sessionFromProfile(profile) {
+    const isAdmin = profile.role === 'admin';
+    return {
+      isLoggedIn: true,
+      role: isAdmin ? 'admin' : 'student',
+      userId: profile.id,
+      username: profile.username,
+      displayName: isAdmin ? `مدير المنصة (${profile.username})` : (profile.full_name || profile.username),
+      stage: profile.stage,
+      loginTime: new Date().toISOString()
+    };
+  }
+
+  async function fetchOwnProfile(userId) {
+    const { data, error } = await getSupabase().from('profiles').select('*').eq('id', userId).single();
+    if (error) throw error;
+    return data;
+  }
+
+  // مزامنة حالة الدخول المحلية مع جلسة Supabase (انتهاء الجلسة، تغيير الصلاحيات...)
+  async function syncSupabaseSession() {
+    const sb = getSupabase();
+    if (!sb) return;
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        localStorage.removeItem(AUTH_KEY);
+        return;
+      }
+      const profile = await fetchOwnProfile(session.user.id);
+      localStorage.setItem(AUTH_KEY, JSON.stringify(sessionFromProfile(profile)));
+    } catch (e) {
+      console.warn('تعذر مزامنة جلسة Supabase:', e);
+    }
+  }
+
+  function decodeBase64Pdf(base64Data) {
+    const raw = base64Data.includes('base64,') ? base64Data.slice(base64Data.indexOf('base64,') + 7) : base64Data;
+    const binary = atob(raw.replace(/\s/g, ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: 'application/pdf' });
+  }
+
+  function safeStorageSegment(value, fallback) {
+    const clean = String(value || '').toLowerCase().replace(/\.pdf$/i, '').replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+    return clean.slice(0, 60) || fallback;
+  }
+
   function isGitHubPages() {
     return window.location.hostname.endsWith('.github.io');
   }
 
   function isBackendConfigured() {
+    if (isSupabaseEnabled()) return false;
     return !isGitHubPages() || Boolean(DEPLOYED_API_BASE);
   }
 
@@ -82,8 +181,25 @@ const DataLayer = (() => {
         let fetchedData = null;
         const cacheBuster = `?t=${Date.now()}`;
 
+        // 0. قاعدة بيانات Supabase (المصدر الرئيسي لكل البيانات)
+        if (isSupabaseEnabled()) {
+          const sessionSync = syncSupabaseSession();
+          try {
+            const { data, error } = await getSupabase().rpc('get_platform_data');
+            if (error) throw error;
+            if (data && Array.isArray(data.stages) && data.stages.length > 0) {
+              fetchedData = data;
+              isServerAvailable = true;
+            }
+          } catch (sbErr) {
+            isServerAvailable = false;
+            console.warn('تعذر جلب البيانات من Supabase:', sbErr);
+          }
+          await sessionSync;
+        }
+
         // 1. فحص الخادم المشترك (Server API) إذا كان متاحاً بمهلة فائقة السرعة (1200ms)
-        if (isBackendConfigured() && Date.now() >= apiRetryAfter) {
+        if (!fetchedData && isBackendConfigured() && Date.now() >= apiRetryAfter) {
           try {
             const apiRes = await fetchWithTimeout(apiUrl(`/api/exams${cacheBuster}`), {
               cache: 'no-store',
@@ -299,6 +415,16 @@ const DataLayer = (() => {
     let isServerSaved = false;
     let isCloudSaved = false;
 
+    if (isSupabaseEnabled()) {
+      const { error } = await getSupabase().rpc('save_platform_data', { payload: examData });
+      if (error) {
+        notifyError(`فشل الحفظ في قاعدة البيانات: ${translateSupabaseError(error)}`);
+        return { success: false, isServerSaved: false, isServerAvailable: true, needsGitHubCommit: false };
+      }
+      isServerAvailable = true;
+      return { success: true, isServerSaved: true, isCloudSaved: false, isServerAvailable: true, needsGitHubCommit: false };
+    }
+
     // 2. إرسال التحديث إلى الخادم المشترك إن وجد (Node.js API)
     if (isBackendConfigured()) {
       try {
@@ -345,6 +471,10 @@ const DataLayer = (() => {
    * فحص حالة الخادم المباشر لمعرفة إن كان الموقع يعمل بـ Fullstack أم GitHub Pages Static
    */
   async function checkServerStatus() {
+    if (isSupabaseEnabled()) {
+      const { error } = await getSupabase().rpc('get_platform_data');
+      return { isOnline: !error, hasServer: !error, provider: 'supabase' };
+    }
     if (!isBackendConfigured()) return { isOnline: false, hasServer: false };
     if (Date.now() < apiRetryAfter) return { isOnline: false, hasServer: false };
     try {
@@ -666,6 +796,13 @@ const DataLayer = (() => {
    * رفع ملف PDF إلى الخادم المشترك ليصبح متاحاً للجميع برابط عام
    */
   async function uploadPdfToServer(filename, base64Data, stageId, subjectId) {
+    if (isSupabaseEnabled()) {
+      const storagePath = `uploads/${safeStorageSegment(stageId, 'stage')}/${safeStorageSegment(subjectId, 'subject')}/${Date.now()}-${safeStorageSegment(filename, 'lecture')}.pdf`;
+      const bucket = getSupabase().storage.from(LECTURES_BUCKET);
+      const { error } = await bucket.upload(storagePath, decodeBase64Pdf(base64Data), { contentType: 'application/pdf', upsert: false });
+      if (error) throw new Error(`فشل رفع ملف PDF إلى التخزين: ${translateSupabaseError(error)}`);
+      return bucket.getPublicUrl(storagePath).data.publicUrl;
+    }
     if (!isBackendConfigured()) {
       console.warn('رفع PDF إلى الخادم غير متاح على GitHub Pages؛ سيتم حفظ الملف محلياً فقط.');
       return base64Data;
@@ -801,8 +938,12 @@ const DataLayer = (() => {
 
     // إذا تم رفع ملف محلي من الجهاز بترميز Base64، نرفعه للخادم ليصبح متاحاً للجميع برابط رسمي
     if (fileData.base64Data) {
-      const serverPath = await uploadPdfToServer(fileData.filename || 'lecture.pdf', fileData.base64Data, stageId, subjectId);
-      filePath = serverPath;
+      try {
+        filePath = await uploadPdfToServer(fileData.filename || 'lecture.pdf', fileData.base64Data, stageId, subjectId);
+      } catch (e) {
+        notifyError(e.message);
+        return null;
+      }
     }
 
     const newFile = {
@@ -828,8 +969,12 @@ const DataLayer = (() => {
 
     let filePath = fileData.path || file.path;
     if (fileData.base64Data) {
-      const serverPath = await uploadPdfToServer(fileData.filename || 'lecture.pdf', fileData.base64Data, stageId, subjectId);
-      filePath = serverPath;
+      try {
+        filePath = await uploadPdfToServer(fileData.filename || 'lecture.pdf', fileData.base64Data, stageId, subjectId);
+      } catch (e) {
+        notifyError(e.message);
+        return false;
+      }
     }
 
     if (fileData.number !== undefined) file.number = Number(fileData.number);
@@ -892,6 +1037,18 @@ const DataLayer = (() => {
   }
 
   async function getRegisteredUsers(forceRefresh = true) {
+    if (isSupabaseEnabled()) {
+      if (!isAdminLoggedIn()) return [];
+      const { data, error } = await getSupabase().from('profiles').select('*').eq('role', 'student').order('created_at', { ascending: true });
+      if (error) {
+        usersServerAvailable = true;
+        usersApiError = translateSupabaseError(error);
+        return [];
+      }
+      usersServerAvailable = true;
+      usersApiError = '';
+      return data.map(profileToUser);
+    }
     if (forceRefresh && isBackendConfigured()) {
       const serverUsers = await fetchServerUsers();
       if (serverUsers) return serverUsers;
@@ -925,6 +1082,10 @@ const DataLayer = (() => {
     }
     if (cleanUser === ADMIN_CREDENTIALS.username.toLowerCase()) {
       return { success: false, message: 'اسم المستخدم هذا محجوز مسبقاً للمشرف.' };
+    }
+
+    if (isSupabaseEnabled()) {
+      return registerSupabaseUser({ username: cleanUser, password, fullName, stage }, startSession);
     }
 
     let newUser = null;
@@ -981,9 +1142,67 @@ const DataLayer = (() => {
     return { success: true, user: newUser, session: startSession ? session : null };
   }
 
+  async function invokeAdminUsers(body) {
+    const { data, error } = await getSupabase().functions.invoke('admin-users', { body });
+    if (error) {
+      let message = error.message;
+      try {
+        const details = await error.context?.json();
+        if (details?.error) message = details.error;
+      } catch (e) {}
+      return { success: false, message: translateSupabaseError(message) };
+    }
+    if (data?.error) return { success: false, message: data.error };
+    return { success: true, ...data };
+  }
+
+  async function registerSupabaseUser({ username, password, fullName, stage }, startSession) {
+    const metadata = { username, full_name: (fullName || username).trim(), stage: stage || 'المرحلة الثانية' };
+
+    // إنشاء حساب من لوحة المشرف دون تغيير جلسة المشرف الحالية
+    if (!startSession) {
+      const res = await invokeAdminUsers({ action: 'create', username, password, fullName: metadata.full_name, stage: metadata.stage });
+      if (!res.success) return res;
+      return { success: true, user: profileToUser(res.user), session: null };
+    }
+
+    const { data, error } = await getSupabase().auth.signUp({
+      email: usernameToEmail(username),
+      password,
+      options: { data: metadata }
+    });
+    if (error) return { success: false, message: translateSupabaseError(error) };
+    if (!data.session) {
+      return { success: false, message: 'تم إنشاء الحساب لكن يلزم تفعيل تأكيد البريد في Supabase. تواصل مع المشرف.' };
+    }
+    const profile = await fetchOwnProfile(data.user.id);
+    const session = sessionFromProfile(profile);
+    localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+    return { success: true, user: profileToUser(profile), session };
+  }
+
+  async function loginWithSupabase(cleanUser, cleanPass) {
+    const sb = getSupabase();
+    const { data, error } = await sb.auth.signInWithPassword({ email: usernameToEmail(cleanUser), password: cleanPass });
+    if (error) return { success: false, message: translateSupabaseError(error) };
+    try {
+      const profile = await fetchOwnProfile(data.user.id);
+      const session = sessionFromProfile(profile);
+      localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+      return { success: true, session, role: session.role };
+    } catch (e) {
+      await sb.auth.signOut();
+      return { success: false, message: translateSupabaseError(e) };
+    }
+  }
+
   async function login(username, password) {
     const cleanUser = username.trim().toLowerCase();
     const cleanPass = password.trim();
+
+    if (isSupabaseEnabled()) {
+      return loginWithSupabase(cleanUser, cleanPass);
+    }
 
     // 1. تسجيل دخول المشرف (it7asan)
     if (cleanUser === ADMIN_CREDENTIALS.username) {
@@ -1001,11 +1220,6 @@ const DataLayer = (() => {
             isAuthorized = true;
           }
         } catch (error) {}
-      }
-
-      // التحقق المباشر (يعمل على GitHub Pages والوضع الثابت بدون أي خادم)
-      if (!isAuthorized && (cleanPass === '20032003' || cleanPass === 'it7asan')) {
-        isAuthorized = true;
       }
 
       if (isAuthorized) {
@@ -1068,6 +1282,7 @@ const DataLayer = (() => {
   }
 
   function logout() {
+    if (isSupabaseEnabled()) getSupabase().auth.signOut().catch(() => {});
     localStorage.removeItem(AUTH_KEY);
     sessionStorage.removeItem('optics_admin_api_password');
     return true;
@@ -1095,6 +1310,10 @@ const DataLayer = (() => {
   }
 
   async function updateUser(userId, { username, password, fullName, stage }) {
+    if (isSupabaseEnabled()) {
+      const res = await invokeAdminUsers({ action: 'update', userId, username, password, fullName, stage });
+      return res.success ? { success: true, user: profileToUser(res.user) } : res;
+    }
     if (isBackendConfigured()) {
       try {
         const response = await fetch(apiUrl(`/api/users/${encodeURIComponent(userId)}`), {
@@ -1131,6 +1350,11 @@ const DataLayer = (() => {
   }
 
   async function deleteUser(userId) {
+    if (isSupabaseEnabled()) {
+      const res = await invokeAdminUsers({ action: 'delete', userId });
+      if (!res.success) notifyError(res.message);
+      return res.success;
+    }
     if (isBackendConfigured()) {
       try {
         const response = await fetch(apiUrl(`/api/users/${encodeURIComponent(userId)}`), {
@@ -1255,7 +1479,8 @@ const DataLayer = (() => {
     saveGitHubConfig,
     getCloudSyncConfig,
     saveCloudSyncConfig,
-    checkServerStatus
+    checkServerStatus,
+    isSupabaseEnabled
   };
 })();
 

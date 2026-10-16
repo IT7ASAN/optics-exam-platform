@@ -1298,7 +1298,18 @@ const App = (() => {
     const serverStatus = await window.DataLayer.checkServerStatus();
     const ghCfg = window.DataLayer.getGitHubConfig();
 
-    if (serverStatus.hasServer) {
+    if (serverStatus.provider === 'supabase') {
+      if (iconBox) {
+        iconBox.style.background = serverStatus.hasServer ? 'var(--success)' : 'var(--danger, #dc2626)';
+        iconBox.innerHTML = '<i data-lucide="database" style="width: 20px; height: 20px;"></i>';
+      }
+      bannerTitle.innerHTML = serverStatus.hasServer
+        ? '🟢 المنصة متصلة بقاعدة بيانات Supabase'
+        : '🔴 تعذر الاتصال بقاعدة بيانات Supabase';
+      bannerDesc.innerHTML = serverStatus.hasServer
+        ? 'كل التعديلات (الإعدادات، المواد، المحاضرات، ملفات PDF، والحسابات) تُحفظ مباشرة في Supabase وتظهر لجميع الطلبة فوراً دون الحاجة للنشر على GitHub.'
+        : 'تحقق من اتصال الإنترنت أو من حالة مشروع Supabase ثم أعد المحاولة.';
+    } else if (serverStatus.hasServer) {
       if (iconBox) {
         iconBox.style.background = 'var(--success)';
         iconBox.innerHTML = '<i data-lucide="server" style="width: 20px; height: 20px;"></i>';
@@ -2022,7 +2033,7 @@ git push -u origin main
       onSubmit: async (vals) => {
         showGlobalLoading(true);
         const finalPath = localUploadedDataUrl ? localUploadedDataUrl : vals.m_file_path;
-        await window.DataLayer.addFile(stageId, subjectId, {
+        const fileSaved = await window.DataLayer.addFile(stageId, subjectId, {
           number: vals.m_file_num,
           title: vals.m_file_title,
           description: vals.m_file_desc,
@@ -2035,6 +2046,7 @@ git push -u origin main
           isLocalUploaded: !!localUploadedDataUrl
         });
         showGlobalLoading(false);
+        if (!fileSaved) return;
         state.data = window.DataLayer.getData();
         updateGlobalBranding(state.data);
         renderAdminStagesList();
@@ -2090,7 +2102,7 @@ git push -u origin main
         { id: 'm_file_num', label: 'رقم المحاضرة', value: file.number, type: 'number' },
         { id: 'm_file_title', label: 'عنوان المحاضرة', value: file.title },
         { id: 'm_file_desc', label: 'وصف المحاضرة', type: 'textarea', value: file.description || '' },
-        { id: 'm_file_path', label: 'مسار ملف الـ PDF', value: file.isLocalUploaded ? '[ملف محلي محفوظ في المتصفح]' : file.path },
+        { id: 'm_file_path', label: 'مسار ملف الـ PDF', value: file.isLocalUploaded && String(file.path).startsWith('data:') ? '[ملف محلي محفوظ في المتصفح]' : file.path },
         { id: 'm_file_pages', label: 'عدد الصفحات', value: file.pages || 1, type: 'number' },
         { id: 'm_file_size', label: 'حجم الملف', value: file.size || '' },
         { id: 'm_file_date', label: 'تاريخ الإضافة', value: file.date || '' }
@@ -2098,7 +2110,7 @@ git push -u origin main
       onSubmit: async (vals) => {
         showGlobalLoading(true);
         const finalPath = localUploadedDataUrl ? localUploadedDataUrl : (vals.m_file_path.includes('[ملف محلي') ? file.path : vals.m_file_path);
-        await window.DataLayer.updateFile(stageId, subjectId, fileId, {
+        const fileSaved = await window.DataLayer.updateFile(stageId, subjectId, fileId, {
           number: vals.m_file_num,
           title: vals.m_file_title,
           description: vals.m_file_desc,
@@ -2111,6 +2123,7 @@ git push -u origin main
           isLocalUploaded: localUploadedDataUrl ? true : file.isLocalUploaded
         });
         showGlobalLoading(false);
+        if (!fileSaved) return;
         state.data = window.DataLayer.getData();
         updateGlobalBranding(state.data);
         renderAdminStagesList();

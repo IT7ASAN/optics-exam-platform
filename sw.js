@@ -1,4 +1,4 @@
-const CACHE_NAME = 'optics-platform-v7';
+const CACHE_NAME = 'optics-platform-v8';
 
 self.addEventListener('install', event => {
   event.waitUntil(self.skipWaiting());
