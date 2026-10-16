@@ -2024,7 +2024,7 @@ git push -u origin main
       fields: [
         { id: 'm_file_num', label: 'رقم المحاضرة', value: nextNum, type: 'number' },
         { id: 'm_file_title', label: 'عنوان المحاضرة', placeholder: `المحاضرة 0${nextNum}: عنوان الموضوع` },
-        { id: 'm_file_desc', label: 'وصف المحاضرة (اختياري)', type: 'textarea', placeholder: 'ملخص المفاهيم والمسائل...' },
+        { id: 'm_file_desc', label: 'وصف المحاضرة (اختياري)', type: 'textarea', placeholder: 'ملخص المفاهيم والمسائل...', required: false },
         { id: 'm_file_path', label: 'مسار الملف النسبي (أو يتم ملؤه بالملف المرفوع)', value: `files/${stageId}/${subjectId.replace(stageId + '-', '')}/lecture-0${nextNum}.pdf` },
         { id: 'm_file_pages', label: 'عدد الصفحات', value: 16, type: 'number' },
         { id: 'm_file_size', label: 'حجم الملف التقديري', value: '2.8 MB' },
@@ -2101,7 +2101,7 @@ git push -u origin main
       fields: [
         { id: 'm_file_num', label: 'رقم المحاضرة', value: file.number, type: 'number' },
         { id: 'm_file_title', label: 'عنوان المحاضرة', value: file.title },
-        { id: 'm_file_desc', label: 'وصف المحاضرة', type: 'textarea', value: file.description || '' },
+        { id: 'm_file_desc', label: 'وصف المحاضرة (اختياري)', type: 'textarea', value: file.description || '', required: false },
         { id: 'm_file_path', label: 'مسار ملف الـ PDF', value: file.isLocalUploaded && String(file.path).startsWith('data:') ? '[ملف محلي محفوظ في المتصفح]' : file.path },
         { id: 'm_file_pages', label: 'عدد الصفحات', value: file.pages || 1, type: 'number' },
         { id: 'm_file_size', label: 'حجم الملف', value: file.size || '' },

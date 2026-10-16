@@ -925,8 +925,10 @@ const DataLayer = (() => {
     if (!stage || !stage.subjects) return false;
     const idx = stage.subjects.findIndex(s => s.id === subjectId);
     if (idx === -1) return false;
-    stage.subjects.splice(idx, 1);
-    return await saveChanges();
+    const [removed] = stage.subjects.splice(idx, 1);
+    const saved = await saveChanges();
+    if (saved) await removeStoredPdfs(removed.files);
+    return saved;
   }
 
   async function addFile(stageId, subjectId, fileData) {
@@ -967,6 +969,7 @@ const DataLayer = (() => {
     const file = getFileById(stageId, subjectId, fileId);
     if (!file) return false;
 
+    const previousPath = file.path;
     let filePath = fileData.path || file.path;
     if (fileData.base64Data) {
       try {
@@ -986,7 +989,9 @@ const DataLayer = (() => {
     if (fileData.date) file.date = fileData.date.trim();
     if (fileData.isLocalUploaded !== undefined) file.isLocalUploaded = !!fileData.isLocalUploaded;
 
-    return await saveChanges();
+    const saved = await saveChanges();
+    if (saved && previousPath !== file.path) await removeStoredPdfs([{ path: previousPath }]);
+    return saved;
   }
 
   async function deleteFile(stageId, subjectId, fileId) {
@@ -994,8 +999,24 @@ const DataLayer = (() => {
     if (!subject || !subject.files) return false;
     const idx = subject.files.findIndex(f => f.id === fileId);
     if (idx === -1) return false;
-    subject.files.splice(idx, 1);
-    return await saveChanges();
+    const [removed] = subject.files.splice(idx, 1);
+    const saved = await saveChanges();
+    if (saved) await removeStoredPdfs([removed]);
+    return saved;
+  }
+
+  function storagePathFromUrl(fileUrl) {
+    if (!SUPABASE_CONFIG.url || typeof fileUrl !== 'string') return null;
+    const prefix = `${SUPABASE_CONFIG.url}/storage/v1/object/public/${LECTURES_BUCKET}/`;
+    return fileUrl.startsWith(prefix) ? decodeURIComponent(fileUrl.slice(prefix.length)) : null;
+  }
+
+  async function removeStoredPdfs(files) {
+    if (!isSupabaseEnabled()) return;
+    const paths = (files || []).map(f => storagePathFromUrl(f && f.path)).filter(Boolean);
+    if (!paths.length) return;
+    const { error } = await getSupabase().storage.from(LECTURES_BUCKET).remove(paths);
+    if (error) console.warn('تعذر حذف ملفات PDF من التخزين:', error);
   }
 
   /**
